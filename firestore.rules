@@ -1,0 +1,57 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validSubject(subject) {
+      return subject in ['GDE', 'DesSoft', 'InstruMed', 'DesProd', 'Tópicos', 'ModSim'];
+    }
+
+    function validActivity(data) {
+      return data.keys().hasOnly([
+          'title',
+          'subject',
+          'dueDate',
+          'completed',
+          'createdAt',
+          'updatedAt'
+        ])
+        && data.title is string
+        && data.title.size() >= 3
+        && data.title.size() <= 120
+        && validSubject(data.subject)
+        && data.dueDate is string
+        && data.dueDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.completed is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /activities/{activityId} {
+      allow read: if signedIn();
+
+      allow create: if signedIn()
+        && validActivity(request.resource.data)
+        && request.resource.data.completed == false
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+
+      // Título, data e disciplina só podem ser definidos no momento da inserção.
+      allow update: if signedIn()
+        && validActivity(request.resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys()
+          .hasOnly(['completed', 'updatedAt'])
+        && request.resource.data.updatedAt == request.time;
+
+      // Uma atividade precisa estar no histórico antes de ser apagada.
+      allow delete: if signedIn() && resource.data.completed == true;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

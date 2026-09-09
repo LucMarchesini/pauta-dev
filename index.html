@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Agenda coletiva de atividades da Turma B de Engenharia do Insper."
+    />
+    <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
+    <meta name="theme-color" content="#e50505" />
+    <title>Agenda B | Engenharias</title>
+
+    <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="styles.css" />
+    <script type="module" src="app.js"></script>
+  </head>
+
+  <body>
+    <a class="skip-link" href="#conteudo">Ir para o conteúdo</a>
+
+    <header class="site-header">
+      <div class="header-inner">
+        <a class="brand" href="#inicio" aria-label="Voltar ao início da Agenda B">
+          <img
+            class="brand-logo"
+            src="assets/insper-logo.svg"
+            alt="Insper"
+            width="137"
+            height="48"
+          />
+          <span class="brand-divider" aria-hidden="true"></span>
+          <span class="brand-context">
+            <strong>Agenda B</strong>
+            <span>Engenharias</span>
+          </span>
+        </a>
+
+        <nav class="main-nav" aria-label="Navegação principal">
+          <a href="#atividades">Atividades</a>
+          <a href="#historico">Histórico</a>
+          <a class="nav-primary" href="#inserir">+ Inserir</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="conteudo">
+      <section class="hero" id="inicio" aria-labelledby="hero-title">
+        <div class="hero-inner">
+          <div class="hero-copy">
+            <p class="eyebrow"><span></span> Turma B · Agenda coletiva</p>
+            <h1 id="hero-title">Tudo o que a turma precisa entregar.</h1>
+            <p class="hero-description">
+              Uma visão única das próximas atividades e de tudo o que já foi concluído.
+            </p>
+          </div>
+
+          <div class="hero-side" aria-label="Estado da agenda">
+            <span class="hero-letter" aria-hidden="true">B</span>
+            <div class="connection-pill" id="connection-pill" data-mode="loading">
+              <span class="connection-dot" aria-hidden="true"></span>
+              <span id="connection-label">Conectando…</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="page-shell">
+        <aside class="setup-banner" id="setup-banner" hidden>
+          <div>
+            <strong id="setup-title">Prévia local</strong>
+            <p id="setup-message">
+              As alterações estão salvas somente neste navegador. Configure o Firebase antes
+              de publicar para sincronizar a agenda da turma.
+            </p>
+          </div>
+          <span aria-hidden="true">→</span>
+        </aside>
+
+        <section class="insert-panel" id="inserir" aria-labelledby="insert-title">
+          <div class="section-intro">
+            <p class="section-number">01 · INSERIR</p>
+            <h2 id="insert-title">Nova atividade</h2>
+            <p>Adicione apenas informações confirmadas com o professor.</p>
+          </div>
+
+          <form class="activity-form" id="activity-form">
+            <div class="field field-date">
+              <label for="activity-date">Data de entrega</label>
+              <input id="activity-date" name="date" type="date" required />
+            </div>
+
+            <div class="field field-title">
+              <label for="activity-title">Título da atividade</label>
+              <input
+                id="activity-title"
+                name="title"
+                type="text"
+                placeholder="Ex.: Lista 03 — funções"
+                minlength="3"
+                maxlength="120"
+                autocomplete="off"
+                required
+              />
+            </div>
+
+            <div class="field field-subject">
+              <label for="activity-subject">Disciplina</label>
+              <select id="activity-subject" name="subject" required>
+                <option value="" selected disabled>Selecionar</option>
+                <option value="GDE">GDE</option>
+                <option value="DesSoft">DesSoft</option>
+                <option value="InstruMed">InstruMed</option>
+                <option value="DesProd">DesProd</option>
+                <option value="Tópicos">Tópicos</option>
+                <option value="ModSim">ModSim</option>
+              </select>
+            </div>
+
+            <button class="submit-button" id="submit-button" type="submit">
+              <span>Adicionar atividade</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </button>
+          </form>
+        </section>
+
+        <section class="activity-section" id="atividades" aria-labelledby="activities-title">
+          <div class="section-heading">
+            <div>
+              <p class="section-number">02 · ATIVIDADES</p>
+              <h2 id="activities-title">Próximas entregas</h2>
+            </div>
+            <span class="count-badge" id="activities-count" aria-live="polite">0</span>
+          </div>
+
+          <div class="table-card">
+            <div class="table-header" aria-hidden="true">
+              <span>Status</span>
+              <span>Data</span>
+              <span>Atividade</span>
+              <span>Disciplina</span>
+              <span></span>
+            </div>
+            <ul class="activity-list" id="activities-list" aria-live="polite"></ul>
+            <div class="empty-state" id="activities-empty" hidden>
+              <span class="empty-icon" aria-hidden="true">✓</span>
+              <div>
+                <strong>Nenhuma atividade pendente</strong>
+                <p>Quando alguém inserir uma nova entrega, ela aparecerá aqui.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          class="activity-section history-section"
+          id="historico"
+          aria-labelledby="history-title"
+        >
+          <div class="section-heading">
+            <div>
+              <p class="section-number">03 · HISTÓRICO</p>
+              <h2 id="history-title">Atividades concluídas</h2>
+            </div>
+            <span class="count-badge count-badge-muted" id="history-count" aria-live="polite"
+              >0</span
+            >
+          </div>
+
+          <div class="table-card history-card">
+            <div class="table-header" aria-hidden="true">
+              <span>Status</span>
+              <span>Data</span>
+              <span>Atividade</span>
+              <span>Disciplina</span>
+              <span>Ação</span>
+            </div>
+            <ul class="activity-list" id="history-list" aria-live="polite"></ul>
+            <div class="empty-state" id="history-empty" hidden>
+              <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+              <div>
+                <strong>O histórico ainda está vazio</strong>
+                <p>As atividades marcadas como concluídas ficarão guardadas aqui.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div>
+          <strong>Agenda B</strong>
+          <p>Feita para simplificar a rotina da turma.</p>
+        </div>
+        <p class="footer-credit">
+          Criado por <strong>Eduardo Marques</strong> · Engenharia de Computação
+          <span>Projeto estudantil independente, não oficial.</span>
+        </p>
+      </div>
+    </footer>
+
+    <dialog class="confirm-dialog" id="delete-dialog" aria-labelledby="dialog-title">
+      <form method="dialog">
+        <div class="dialog-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24">
+            <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
+          </svg>
+        </div>
+        <p class="section-number">EXCLUSÃO DEFINITIVA</p>
+        <h2 id="dialog-title">Apagar esta atividade?</h2>
+        <p id="dialog-description">
+          Ela será removida do histórico para todos e não poderá ser recuperada.
+        </p>
+        <div class="dialog-actions">
+          <button class="button-secondary" value="cancel">Cancelar</button>
+          <button class="button-danger" id="confirm-delete" value="confirm">
+            Apagar definitivamente
+          </button>
+        </div>
+      </form>
+    </dialog>
+
+    <div class="toast" id="toast" role="status" aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>
