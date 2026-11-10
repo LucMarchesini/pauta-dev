@@ -51,7 +51,7 @@
     <main id="conteudo">
       <section class="hero" id="inicio" aria-labelledby="hero-title">
         <div class="hero-inner">
-          <div class="hero-copy">
+          <div>
             <p class="eyebrow"><span></span> Turma B · Agenda coletiva</p>
             <h1 id="hero-title">Tudo o que a turma precisa entregar.</h1>
             <p class="hero-description">
@@ -59,7 +59,7 @@
             </p>
           </div>
 
-          <div class="hero-side" aria-label="Estado da agenda">
+          <div class="hero-side">
             <span class="hero-letter" aria-hidden="true">B</span>
             <div class="connection-pill" id="connection-pill" data-mode="loading">
               <span class="connection-dot" aria-hidden="true"></span>
@@ -168,144 +168,142 @@
         </div>
 
         <div class="tab-panel" id="painel-atividades" role="tabpanel" aria-labelledby="tab-atividades">
-        <section class="insert-panel only-lider" id="inserir" aria-labelledby="insert-title">
-          <div class="section-intro">
-            <p class="section-number">01 · INSERIR</p>
-            <h2 id="insert-title">Nova atividade</h2>
-            <p>Adicione apenas informações confirmadas com o professor.</p>
-          </div>
-
-          <form class="activity-form" id="activity-form">
-            <div class="field field-date">
-              <label for="activity-date">Data de entrega</label>
-              <input id="activity-date" name="dueDate" type="date" required />
+          <section class="insert-panel only-lider" id="inserir" aria-labelledby="insert-title">
+            <div class="section-intro">
+              <p class="section-number">01 · INSERIR</p>
+              <h2 id="insert-title">Nova atividade</h2>
+              <p>Adicione apenas informações confirmadas com o professor.</p>
             </div>
 
-            <div class="field field-title">
-              <label for="activity-title">Título da atividade</label>
-              <input
-                id="activity-title"
-                name="title"
-                type="text"
-                placeholder="Ex.: Lista 03 — funções"
-                minlength="3"
-                maxlength="120"
-                autocomplete="off"
-                required
-              />
-            </div>
+            <form class="activity-form" id="activity-form">
+              <div class="field">
+                <label for="activity-date">Data de entrega</label>
+                <input id="activity-date" name="dueDate" type="date" required />
+              </div>
 
-            <div class="field field-subject">
-              <label for="activity-subject">Disciplina</label>
-              <select id="activity-subject" name="subject" required>
-                <option value="" selected disabled>Selecionar</option>
-                <option value="GDE">GDE</option>
-                <option value="DesSoft">DesSoft</option>
-                <option value="InstruMed">InstruMed</option>
-                <option value="DesProd">DesProd</option>
-                <option value="Tópicos">Tópicos</option>
-                <option value="ModSim">ModSim</option>
-              </select>
-            </div>
+              <div class="field">
+                <label for="activity-title">Título da atividade</label>
+                <input
+                  id="activity-title"
+                  name="title"
+                  type="text"
+                  placeholder="Ex.: Lista 03 — funções"
+                  minlength="3"
+                  maxlength="120"
+                  autocomplete="off"
+                  required
+                />
+              </div>
 
-            <button class="submit-button" type="submit">
-              <span>Adicionar atividade</span>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
-            </button>
-            <button class="text-button cancel-edit" type="button" hidden>Cancelar edição</button>
-          </form>
-        </section>
+              <div class="field">
+                <label for="activity-subject">Disciplina</label>
+                <select id="activity-subject" name="subject" required>
+                  <option value="" selected disabled>Selecionar</option>
+                  <option value="GDE">GDE</option>
+                  <option value="DesSoft">DesSoft</option>
+                  <option value="InstruMed">InstruMed</option>
+                  <option value="DesProd">DesProd</option>
+                  <option value="Tópicos">Tópicos</option>
+                  <option value="ModSim">ModSim</option>
+                </select>
+              </div>
 
-        <section class="activity-section only-user" id="atividades" aria-labelledby="activities-title">
-          <div class="section-heading">
-            <div>
-              <p class="section-number">02 · ATIVIDADES</p>
-              <h2 id="activities-title">Próximas entregas</h2>
-            </div>
-            <span class="count-badge" id="activities-count" aria-live="polite">0</span>
-          </div>
+              <button class="submit-button" type="submit">
+                <span>Adicionar atividade</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </button>
+              <button class="text-button cancel-edit" type="button" hidden>Cancelar edição</button>
+            </form>
+          </section>
 
-          <div class="filter-chips" id="subject-filter" role="group" aria-label="Filtrar por disciplina"></div>
-
-          <div class="table-card">
-            <div class="table-header" aria-hidden="true">
-              <span>Eu fiz</span>
-              <span>Data</span>
-              <span>Atividade</span>
-              <span>Disciplina</span>
-              <span></span>
-            </div>
-            <ul class="activity-list" id="activities-list"></ul>
-            <div class="empty-state" id="activities-empty" hidden>
-              <span class="empty-icon" aria-hidden="true">✓</span>
+          <section class="activity-section only-user" id="atividades" aria-labelledby="activities-title">
+            <div class="section-heading">
               <div>
-                <strong>Nenhuma atividade pendente</strong>
-                <p>Quando um líder inserir uma nova entrega, ela aparecerá aqui.</p>
+                <p class="section-number">02 · ATIVIDADES</p>
+                <h2 id="activities-title">Próximas entregas</h2>
+              </div>
+              <span class="count-badge" id="activities-count">0</span>
+            </div>
+
+            <div class="filter-chips" id="subject-filter" role="group" aria-label="Filtrar por disciplina"></div>
+
+            <div class="table-card">
+              <div class="table-header" aria-hidden="true">
+                <span>Eu fiz</span>
+                <span>Data</span>
+                <span>Atividade</span>
+                <span>Disciplina</span>
+                <span></span>
+              </div>
+              <ul class="activity-list" id="activities-list"></ul>
+              <div class="empty-state" id="activities-empty" hidden>
+                <span class="empty-icon" aria-hidden="true">✓</span>
+                <div>
+                  <strong>Nenhuma atividade pendente</strong>
+                  <p>Quando um líder inserir uma nova entrega, ela aparecerá aqui.</p>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section
-          class="activity-section history-section only-user"
-          id="historico"
-          aria-labelledby="history-title"
-        >
-          <div class="section-heading">
-            <div>
-              <p class="section-number">03 · HISTÓRICO</p>
-              <h2 id="history-title">Entregas passadas</h2>
-            </div>
-            <span class="count-badge count-badge-muted" id="history-count" aria-live="polite"
-              >0</span
-            >
-          </div>
-
-          <div class="table-card history-card">
-            <div class="table-header" aria-hidden="true">
-              <span>Eu fiz</span>
-              <span>Data</span>
-              <span>Atividade</span>
-              <span>Disciplina</span>
-              <span></span>
-            </div>
-            <ul class="activity-list" id="history-list"></ul>
-            <div class="empty-state" id="history-empty" hidden>
-              <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+          <section
+            class="activity-section only-user"
+            id="historico"
+            aria-labelledby="history-title"
+          >
+            <div class="section-heading">
               <div>
-                <strong>O histórico ainda está vazio</strong>
-                <p>As atividades com a data de entrega vencida ficam guardadas aqui.</p>
+                <p class="section-number">03 · HISTÓRICO</p>
+                <h2 id="history-title">Entregas passadas</h2>
+              </div>
+              <span class="count-badge count-badge-muted" id="history-count">0</span>
+            </div>
+
+            <div class="table-card history-card">
+              <div class="table-header" aria-hidden="true">
+                <span>Eu fiz</span>
+                <span>Data</span>
+                <span>Atividade</span>
+                <span>Disciplina</span>
+                <span></span>
+              </div>
+              <ul class="activity-list" id="history-list"></ul>
+              <div class="empty-state" id="history-empty" hidden>
+                <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+                <div>
+                  <strong>O histórico ainda está vazio</strong>
+                  <p>As atividades com a data de entrega vencida ficam guardadas aqui.</p>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
 
-        <section
-          class="activity-section history-section only-lider"
-          id="lixeira"
-          aria-labelledby="trash-title"
-        >
-          <div class="section-heading">
-            <div>
-              <p class="section-number">04 · LIXEIRA</p>
-              <h2 id="trash-title">Apagadas recentemente</h2>
-            </div>
-            <span class="count-badge count-badge-muted" id="trash-count" aria-live="polite">0</span>
-          </div>
-
-          <div class="table-card history-card trash-card">
-            <ul class="activity-list" id="trash-list"></ul>
-            <div class="empty-state" id="trash-empty" hidden>
-              <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+          <section
+            class="activity-section only-lider"
+            id="lixeira"
+            aria-labelledby="trash-title"
+          >
+            <div class="section-heading">
               <div>
-                <strong>A lixeira está vazia</strong>
-                <p>Atividades apagadas ficam aqui por 7 dias e podem ser restauradas.</p>
+                <p class="section-number">04 · LIXEIRA</p>
+                <h2 id="trash-title">Apagadas recentemente</h2>
+              </div>
+              <span class="count-badge count-badge-muted" id="trash-count">0</span>
+            </div>
+
+            <div class="table-card history-card trash-card">
+              <ul class="activity-list" id="trash-list"></ul>
+              <div class="empty-state" id="trash-empty" hidden>
+                <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+                <div>
+                  <strong>A lixeira está vazia</strong>
+                  <p>Atividades apagadas ficam aqui por 7 dias e podem ser restauradas.</p>
+                </div>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
         </div>
 
         <div
@@ -322,7 +320,7 @@
               <p>Avisos dos líderes ou repassados dos professores.</p>
             </div>
 
-            <form class="activity-form notice-form" id="notice-form">
+            <form class="activity-form" id="notice-form">
               <div class="field field-wide">
                 <label for="notice-title">Título do aviso</label>
                 <input
@@ -404,7 +402,7 @@
           </section>
 
           <section
-            class="activity-section history-section only-lider"
+            class="activity-section only-lider"
             id="lixeira-avisos"
             aria-labelledby="notice-trash-title"
           >
@@ -535,7 +533,7 @@
           </section>
 
           <section
-            class="activity-section history-section only-lider"
+            class="activity-section only-lider"
             id="lixeira-eventos"
             aria-labelledby="event-trash-title"
           >
