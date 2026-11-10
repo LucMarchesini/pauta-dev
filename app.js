@@ -143,6 +143,7 @@ const state = {
 start();
 
 async function start() {
+  if (DEV_MODE) document.title = `[DEV] ${document.title}`;
   bindEvents();
   elements.loginHint.hidden = !DEV_MODE;
   state.user = await getCurrentUser();
@@ -167,8 +168,10 @@ async function start() {
   if (revealTab(location.hash)) document.getElementById(location.hash.slice(1))?.scrollIntoView();
   render();
 
-  if (!hasFirebaseConfig()) {
-    useLocalMode();
+  // Modo local (localStorage + snapshot) só existe em DEV. Fora dele, se o Firebase
+  // falhar, fica só o erro de sincronização e nada pode ser gravado (state.service nulo).
+  if (DEV_MODE) {
+    await useLocalMode();
     return;
   }
 
@@ -177,8 +180,7 @@ async function start() {
     setConnection("online", "Sincronizado com a turma");
     subscribeAll(handleRemoteError);
   } catch (error) {
-    console.error("Não foi possível iniciar o Firebase:", error);
-    useLocalMode("Não foi possível conectar ao Firebase. A agenda entrou em modo local.");
+    handleRemoteError(error);
   }
 }
 
@@ -200,7 +202,7 @@ function bindEvents() {
   document.addEventListener("click", handleAnchorClick);
   elements.deleteDialog.addEventListener("close", handleDialogClose);
   elements.loginForm.addEventListener("submit", handleLogin);
-  elements.loginForm.addEventListener("click", handleTestLogin);
+  if (DEV_MODE) elements.loginForm.addEventListener("click", handleTestLogin);
   elements.logoutButton.addEventListener("click", handleLogout);
   elements.noAccessLogout.addEventListener("click", handleLogout);
 }
@@ -231,25 +233,12 @@ async function handleLogout() {
   location.reload();
 }
 
-function hasFirebaseConfig() {
-  const required = ["apiKey", "authDomain", "projectId", "appId"];
-  return required.every((key) => {
-    const value = firebaseConfig[key];
-    return typeof value === "string" && value.length > 4 && !value.startsWith("COLE_");
-  });
-}
-
-async function useLocalMode(message) {
+// Só em DEV (ver start): dados no localStorage e aviso de ambiente visível.
+async function useLocalMode() {
   await seedLocalItems();
   state.service = createLocalService(state.user.id);
   setConnection("offline", "Modo local");
   elements.setupBanner.hidden = false;
-
-  if (message) {
-    elements.setupTitle.textContent = "Sincronização indisponível";
-    elements.setupMessage.textContent = message;
-  }
-
   subscribeAll();
 }
 
@@ -404,11 +393,13 @@ async function seedLocalItems() {
   }
 }
 
-window.resetDevData = () => {
-  Object.keys(collections).forEach((name) => localStorage.removeItem(localKey(name)));
-  localStorage.removeItem(LOCAL_PROGRESS_KEY);
-  location.reload();
-};
+if (DEV_MODE) {
+  window.resetDevData = () => {
+    Object.keys(collections).forEach((name) => localStorage.removeItem(localKey(name)));
+    localStorage.removeItem(LOCAL_PROGRESS_KEY);
+    location.reload();
+  };
+}
 
 function readLocal(key, fallback) {
   try {
@@ -638,7 +629,7 @@ async function handleListChange(event) {
 
 function handleRowClick(event) {
   const button = event.target.closest("button[data-action]");
-  if (!button || !isLeader()) return;
+  if (!button || !isLeader() || !state.service) return;
 
   const config = collections[button.dataset.collection];
   const item = config && state.data[config.name].find((entry) => entry.id === button.dataset.id);
