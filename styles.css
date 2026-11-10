@@ -921,7 +921,8 @@ a {
 
   .brand-divider,
   .brand-context span,
-  .main-nav a:not(.nav-primary) {
+  .main-nav a:not(.nav-primary),
+  .user-name {
     display: none;
   }
 
@@ -1099,4 +1100,46 @@ a {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* Visibilidade por papel: body[data-role] é "anon", "aluno" ou "lider". */
+body[data-role="anon"] .only-user,
+body:not([data-role="lider"]) .only-lider,
+body:not([data-role="anon"]) .only-anon {
+  display: none !important;
+}
+
+.user-name {
+  color: var(--ink-soft);
+  font-weight: 600;
+}
+
+.logout-button {
+  border: 0;
+  background: none;
+  padding: 0;
+  font-weight: 700;
+}
+
+.logout-button:hover {
+  color: var(--red);
+}
+
+.login-form {
+  grid-template-columns: 1fr;
+}
+
+.login-hint {
+  margin: 0;
+  color: #bcbcbc;
+  font-size: 0.84rem;
+}
+
+.login-hint button {
+  border: 0;
+  background: none;
+  color: #ff7d7d;
+  padding: 0;
+  font-weight: 800;
+  text-decoration: underline;
 }

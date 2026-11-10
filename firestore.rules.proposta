@@ -1,0 +1,73 @@
+// PROPOSTA — NÃO FAZER DEPLOY. Revisar antes de substituir firestore.rules.
+// Fase 1: base de autenticação e papéis. As fases seguintes completam este arquivo.
+//
+// Como o papel de líder é validado no backend:
+// - O login real (Firebase Auth com conta Google do Insper) entrega request.auth
+//   com o e-mail verificado do usuário.
+// - Os líderes são cadastrados à mão no console do Firebase, na coleção
+//   /leaders/{uid} (um documento vazio por líder). Nenhum cliente consegue
+//   escrever nessa coleção, então ninguém se promove a líder pelo site.
+// - Toda escrita de conteúdo checa isLeader() aqui nas regras. Esconder botões no
+//   site é só conveniência: um aluno que chame a API direto é barrado aqui.
+// - Para tirar alguém da liderança, basta apagar o documento em /leaders.
+
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Usuário logado com e-mail verificado de um domínio do Insper.
+    function isInsper() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.matches('.*@(al[.])?insper[.]edu[.]br$');
+    }
+
+    // Líder = usuário do Insper com documento em /leaders/{uid}.
+    function isLeader() {
+      return isInsper()
+        && exists(/databases/$(database)/documents/leaders/$(request.auth.uid));
+    }
+
+    function validSubject(subject) {
+      return subject in ['GDE', 'DesSoft', 'InstruMed', 'DesProd', 'Tópicos', 'ModSim'];
+    }
+
+    function validActivity(data) {
+      return data.keys().hasOnly(['title', 'subject', 'dueDate', 'completed', 'createdAt', 'updatedAt'])
+        && data.title is string
+        && data.title.size() >= 3
+        && data.title.size() <= 120
+        && validSubject(data.subject)
+        && data.dueDate is string
+        && data.dueDate.matches('^[0-9]{4}-[0-9]{2}-[0-9]{2}$')
+        && data.completed is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    // Cada usuário só lê o próprio documento de liderança; ninguém escreve pelo site.
+    match /leaders/{uid} {
+      allow read: if isInsper() && request.auth.uid == uid;
+      allow write: if false;
+    }
+
+    match /activities/{activityId} {
+      // Toda a turma (Insper) lê; só líderes criam, alteram e apagam.
+      allow read: if isInsper();
+      allow create: if isLeader()
+        && validActivity(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if isLeader()
+        && validActivity(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if isLeader() && resource.data.completed == true;
+    }
+
+    // Qualquer outro caminho fica bloqueado.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

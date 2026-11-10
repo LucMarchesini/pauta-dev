@@ -1,4 +1,5 @@
 import { appOptions, firebaseConfig } from "./firebase-config.js";
+import { DEV_MODE, getCurrentUser, login, logout } from "./auth.js";
 
 const FIREBASE_VERSION = "12.18.0";
 const LOCAL_STORAGE_KEY = "agenda-turma-b:DEV:activities:v1";
@@ -26,10 +27,16 @@ const elements = {
   dialogDescription: document.querySelector("#dialog-description"),
   confirmDelete: document.querySelector("#confirm-delete"),
   toast: document.querySelector("#toast"),
+  loginForm: document.querySelector("#login-form"),
+  loginEmail: document.querySelector("#login-email"),
+  loginHint: document.querySelector("#login-hint"),
+  userName: document.querySelector("#user-name"),
+  logoutButton: document.querySelector("#logout-button"),
 };
 
 const state = {
   items: [],
+  user: null,
   service: null,
   pendingDeleteId: null,
   toastTimer: null,
@@ -41,6 +48,16 @@ start();
 
 async function start() {
   bindEvents();
+  elements.loginHint.hidden = !DEV_MODE;
+  state.user = await getCurrentUser();
+  document.body.dataset.role = state.user?.role ?? "anon";
+  elements.userName.textContent = state.user?.name ?? "";
+
+  if (!state.user) {
+    setConnection("offline", "Entre para ver a agenda");
+    return;
+  }
+
   render();
 
   if (!hasFirebaseConfig()) {
@@ -64,6 +81,35 @@ function bindEvents() {
   elements.historyList.addEventListener("change", handleListChange);
   elements.historyList.addEventListener("click", handleHistoryClick);
   elements.deleteDialog.addEventListener("close", handleDialogClose);
+  elements.loginForm.addEventListener("submit", handleLogin);
+  elements.loginForm.addEventListener("click", handleTestLogin);
+  elements.logoutButton.addEventListener("click", handleLogout);
+}
+
+function isLeader() {
+  return state.user?.role === "lider";
+}
+
+async function handleLogin(event) {
+  event.preventDefault();
+  try {
+    await login(elements.loginEmail.value);
+    location.reload();
+  } catch (error) {
+    showToast(error.message);
+  }
+}
+
+function handleTestLogin(event) {
+  const button = event.target.closest("button[data-email]");
+  if (!button) return;
+  elements.loginEmail.value = button.dataset.email;
+  elements.loginForm.requestSubmit();
+}
+
+async function handleLogout() {
+  await logout();
+  location.reload();
 }
 
 function hasFirebaseConfig() {
@@ -244,7 +290,7 @@ function handleRemoteError(error) {
 
 async function handleSubmit(event) {
   event.preventDefault();
-  if (!state.service || !elements.form.reportValidity()) return;
+  if (!isLeader() || !state.service || !elements.form.reportValidity()) return;
 
   const activity = {
     dueDate: elements.date.value,
@@ -274,7 +320,7 @@ async function handleSubmit(event) {
 
 async function handleListChange(event) {
   const checkbox = event.target.closest('input[data-action="toggle"]');
-  if (!checkbox || !state.service) return;
+  if (!checkbox || !isLeader() || !state.service) return;
 
   checkbox.disabled = true;
   try {
@@ -290,7 +336,7 @@ async function handleListChange(event) {
 
 function handleHistoryClick(event) {
   const button = event.target.closest('button[data-action="delete"]');
-  if (!button) return;
+  if (!button || !isLeader()) return;
 
   const activity = state.items.find((item) => item.id === button.dataset.id);
   if (!activity) return;
@@ -359,7 +405,7 @@ function renderList(list, items, completed) {
       createDateBlock(activity.dueDate),
       createActivityCopy(activity),
       createSubjectBadge(activity.subject),
-      completed ? createDeleteButton(activity) : createSpacer(),
+      completed && isLeader() ? createDeleteButton(activity) : createSpacer(),
     );
     fragment.append(row);
   });
@@ -374,6 +420,7 @@ function createCheckbox(activity, completed) {
   const input = document.createElement("input");
   input.type = "checkbox";
   input.checked = completed;
+  input.disabled = !isLeader();
   input.dataset.id = activity.id;
   input.dataset.action = "toggle";
   input.setAttribute(

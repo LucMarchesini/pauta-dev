@@ -76,6 +76,22 @@ Para diminuir a descoberta acidental:
 
 Se no futuro a agenda precisar ser realmente privada, será necessário adotar login institucional ou outra camada de controle de acesso.
 
+## Disciplinas
+
+A lista de disciplinas está fixa em três lugares. Ao mudar, altere os três:
+
+1. `index.html`: opções do `<select id="activity-subject">`;
+2. `app.js`: constante `SUBJECTS`;
+3. `firestore.rules` (e `firestore.rules.proposta`): função `validSubject`.
+
+## Ambiente de desenvolvimento
+
+- `rodar-dev.bat` abre a agenda em `http://localhost:8000`.
+- `firebase-config.js` usa credenciais falsas, então a agenda roda em modo local e não acessa o banco real.
+- O modo local carrega `dev-data/seed.json` (snapshot real, fora do git). Rode `resetDevData()` no console para voltar a ele.
+- `auth.js` é a camada de login. Hoje é um mock com os usuários `lider@al.insper.edu.br` e `aluno@al.insper.edu.br`; o login real substitui só o corpo das funções desse arquivo.
+- `firestore.rules.proposta` contém as regras novas para revisão, ainda sem deploy.
+
 ## Estrutura
 
 ```text

@@ -36,10 +36,12 @@
           </span>
         </a>
 
-        <nav class="main-nav" aria-label="Navegação principal">
+        <nav class="main-nav only-user" aria-label="Navegação principal">
           <a href="#atividades">Atividades</a>
           <a href="#historico">Histórico</a>
-          <a class="nav-primary" href="#inserir">+ Inserir</a>
+          <a class="nav-primary only-lider" href="#inserir">+ Inserir</a>
+          <span class="user-name" id="user-name"></span>
+          <button class="logout-button" id="logout-button" type="button">Sair</button>
         </nav>
       </div>
     </header>
@@ -77,7 +79,42 @@
           <span aria-hidden="true">→</span>
         </aside>
 
-        <section class="insert-panel" id="inserir" aria-labelledby="insert-title">
+        <section class="insert-panel only-anon" id="login" aria-labelledby="login-title">
+          <div class="section-intro">
+            <p class="section-number">ACESSO</p>
+            <h2 id="login-title">Entrar</h2>
+            <p>A agenda é exclusiva para a turma. Use seu e-mail do Insper.</p>
+          </div>
+
+          <form class="activity-form login-form" id="login-form">
+            <div class="field">
+              <label for="login-email">E-mail do Insper</label>
+              <input
+                id="login-email"
+                name="email"
+                type="email"
+                placeholder="nome@al.insper.edu.br"
+                autocomplete="email"
+                required
+              />
+            </div>
+
+            <button class="submit-button" type="submit">
+              <span>Entrar</span>
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M5 12h14M13 6l6 6-6 6" />
+              </svg>
+            </button>
+
+            <p class="login-hint" id="login-hint" hidden>
+              Ambiente de teste: entrar como
+              <button type="button" data-email="lider@al.insper.edu.br">líder</button> ou
+              <button type="button" data-email="aluno@al.insper.edu.br">aluno</button>.
+            </p>
+          </form>
+        </section>
+
+        <section class="insert-panel only-lider" id="inserir" aria-labelledby="insert-title">
           <div class="section-intro">
             <p class="section-number">01 · INSERIR</p>
             <h2 id="insert-title">Nova atividade</h2>
@@ -126,7 +163,7 @@
           </form>
         </section>
 
-        <section class="activity-section" id="atividades" aria-labelledby="activities-title">
+        <section class="activity-section only-user" id="atividades" aria-labelledby="activities-title">
           <div class="section-heading">
             <div>
               <p class="section-number">02 · ATIVIDADES</p>
@@ -155,7 +192,7 @@
         </section>
 
         <section
-          class="activity-section history-section"
+          class="activity-section history-section only-user"
           id="historico"
           aria-labelledby="history-title"
         >
