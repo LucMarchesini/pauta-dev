@@ -2,10 +2,14 @@ import { appOptions, firebaseConfig } from "./firebase-config.js";
 import { DEV_MODE, getCurrentUser, login, logout } from "./auth.js";
 
 const FIREBASE_VERSION = "12.18.0";
-const LOCAL_STORAGE_KEY = "agenda-turma-b:DEV:activities:v1";
-const LOCAL_PROGRESS_KEY = "agenda-turma-b:DEV:progress:v1";
+const ACTIVITIES = appOptions.collectionName;
+const NOTICES = "notices";
+const LOCAL_PREFIX = "agenda-turma-b:DEV:";
+const LOCAL_PROGRESS_KEY = `${LOCAL_PREFIX}progress:v1`;
 const SUBJECTS = new Set(["GDE", "DesSoft", "InstruMed", "DesProd", "Tópicos", "ModSim"]);
+const SOURCES = { lideres: "Líderes", professor: "Professor" };
 const MONTHS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
+const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const CLASS_SIZE = appOptions.classSize;
 const DAY_MS = 86_400_000;
 const TRASH_DAYS = 7;
@@ -17,29 +21,37 @@ const ICONS = {
 };
 
 const elements = {
+  main: document.querySelector("main"),
+  tabs: document.querySelector("#tabs"),
   form: document.querySelector("#activity-form"),
-  formTitle: document.querySelector("#insert-title"),
   date: document.querySelector("#activity-date"),
   title: document.querySelector("#activity-title"),
   subject: document.querySelector("#activity-subject"),
-  submit: document.querySelector("#submit-button"),
-  cancelEdit: document.querySelector("#cancel-edit"),
+  noticeForm: document.querySelector("#notice-form"),
+  noticeDetailField: document.querySelector("#notice-detail-field"),
   subjectFilter: document.querySelector("#subject-filter"),
   activitiesList: document.querySelector("#activities-list"),
   historyList: document.querySelector("#history-list"),
   trashList: document.querySelector("#trash-list"),
+  noticesList: document.querySelector("#notices-list"),
+  noticeTrashList: document.querySelector("#notice-trash-list"),
   activitiesEmpty: document.querySelector("#activities-empty"),
   historyEmpty: document.querySelector("#history-empty"),
   trashEmpty: document.querySelector("#trash-empty"),
+  noticesEmpty: document.querySelector("#notices-empty"),
+  noticeTrashEmpty: document.querySelector("#notice-trash-empty"),
   activitiesCount: document.querySelector("#activities-count"),
   historyCount: document.querySelector("#history-count"),
   trashCount: document.querySelector("#trash-count"),
+  noticesCount: document.querySelector("#notices-count"),
+  noticeTrashCount: document.querySelector("#notice-trash-count"),
   setupBanner: document.querySelector("#setup-banner"),
   setupTitle: document.querySelector("#setup-title"),
   setupMessage: document.querySelector("#setup-message"),
   connectionPill: document.querySelector("#connection-pill"),
   connectionLabel: document.querySelector("#connection-label"),
   deleteDialog: document.querySelector("#delete-dialog"),
+  dialogTitle: document.querySelector("#dialog-title"),
   dialogDescription: document.querySelector("#dialog-description"),
   confirmDelete: document.querySelector("#confirm-delete"),
   toast: document.querySelector("#toast"),
@@ -50,14 +62,48 @@ const elements = {
   logoutButton: document.querySelector("#logout-button"),
 };
 
+// Tudo o que muda entre coleções: formulário, validação e textos.
+const collections = {
+  [ACTIVITIES]: {
+    name: ACTIVITIES,
+    form: elements.form,
+    headings: ["Nova atividade", "Editar atividade"],
+    addLabels: ["Adicionando…", "Adicionar atividade"],
+    isValid: isValidActivity,
+    read: readActivity,
+    texts: {
+      added: "Atividade adicionada à agenda.",
+      trashed: "Atividade movida para a lixeira.",
+      restored: "Atividade restaurada.",
+      dialogTitle: "Apagar esta atividade?",
+      trashNote: "Ela fica na lixeira por 7 dias e pode ser restaurada.",
+    },
+  },
+  [NOTICES]: {
+    name: NOTICES,
+    form: elements.noticeForm,
+    headings: ["Novo aviso", "Editar aviso"],
+    addLabels: ["Publicando…", "Publicar aviso"],
+    isValid: isValidNotice,
+    read: readNotice,
+    sync: syncNoticeForm,
+    texts: {
+      added: "Aviso publicado.",
+      trashed: "Aviso movido para a lixeira.",
+      restored: "Aviso restaurado.",
+      dialogTitle: "Apagar este aviso?",
+      trashNote: "Ele fica na lixeira por 7 dias e pode ser restaurado.",
+    },
+  },
+};
+
 const state = {
-  items: [],
+  data: { [ACTIVITIES]: [], [NOTICES]: [] },
   done: new Set(),
   user: null,
   service: null,
   filter: "all",
-  editingId: null,
-  pendingDeleteId: null,
+  pendingDelete: null,
   justToggled: null,
   lastCounts: new Map(),
   renderQueued: false,
@@ -79,6 +125,8 @@ async function start() {
   }
 
   createFilterChips();
+  syncNoticeForm();
+  if (revealTab(location.hash)) document.getElementById(location.hash.slice(1))?.scrollIntoView();
   render();
 
   if (!hasFirebaseConfig()) {
@@ -89,7 +137,7 @@ async function start() {
   try {
     state.service = await createFirebaseService(state.user.id);
     setConnection("online", "Sincronizado com a turma");
-    state.service.subscribe(handleItems, handleDone, handleRemoteError);
+    subscribeAll(handleRemoteError);
   } catch (error) {
     console.error("Não foi possível iniciar o Firebase:", error);
     useLocalMode("Não foi possível conectar ao Firebase. A agenda entrou em modo local.");
@@ -97,16 +145,20 @@ async function start() {
 }
 
 function bindEvents() {
-  elements.form.addEventListener("submit", handleSubmit);
-  elements.cancelEdit.addEventListener("click", () => {
-    stopEdit();
-    elements.title.focus();
+  Object.values(collections).forEach((config) => {
+    config.form.addEventListener("submit", (event) => handleSubmit(event, config));
+    config.form.querySelector(".cancel-edit").addEventListener("click", () => {
+      stopEdit(config);
+      config.form.elements.title.focus();
+    });
   });
+  elements.noticeForm.elements.source.addEventListener("change", syncNoticeForm);
   elements.subjectFilter.addEventListener("click", handleFilterClick);
-  [elements.activitiesList, elements.historyList, elements.trashList].forEach((list) => {
-    list.addEventListener("change", handleListChange);
-    list.addEventListener("click", handleRowClick);
-  });
+  elements.main.addEventListener("change", handleListChange);
+  elements.main.addEventListener("click", handleRowClick);
+  elements.tabs.addEventListener("click", handleTabClick);
+  elements.tabs.addEventListener("keydown", handleTabKey);
+  document.addEventListener("click", handleAnchorClick);
   elements.deleteDialog.addEventListener("close", handleDialogClose);
   elements.loginForm.addEventListener("submit", handleLogin);
   elements.loginForm.addEventListener("click", handleTestLogin);
@@ -158,7 +210,14 @@ async function useLocalMode(message) {
     elements.setupMessage.textContent = message;
   }
 
-  state.service.subscribe(handleItems, handleDone);
+  subscribeAll();
+}
+
+function subscribeAll(onError) {
+  Object.values(collections).forEach((config) => {
+    state.service.subscribe(config.name, (items) => handleItems(config, items), onError);
+  });
+  state.service.subscribeDone(handleDone, onError);
 }
 
 // Progresso individual: /progress/{uid} guarda { done: { [activityId]: true } }, legível só
@@ -176,16 +235,16 @@ async function createFirebaseService(userId) {
   await authModule.signInAnonymously(auth);
 
   const db = firestore.getFirestore(app);
-  const activities = firestore.collection(db, appOptions.collectionName);
-  const activity = (id) => firestore.doc(db, appOptions.collectionName, id);
+  const now = firestore.serverTimestamp;
+  const reference = (name, id) => firestore.doc(db, name, id);
   const progress = firestore.doc(db, "progress", userId);
-  const update = (id, fields) =>
-    firestore.updateDoc(activity(id), { ...fields, updatedAt: firestore.serverTimestamp() });
+  const update = (name, id, fields) =>
+    firestore.updateDoc(reference(name, id), { ...fields, updatedAt: now() });
 
   return {
-    subscribe(onItems, onDone, onError) {
+    subscribe(name, onItems, onError) {
       firestore.onSnapshot(
-        activities,
+        firestore.collection(db, name),
         (snapshot) => {
           onItems(
             snapshot.docs.map((item) => ({
@@ -196,109 +255,114 @@ async function createFirebaseService(userId) {
         },
         onError,
       );
+    },
+
+    subscribeDone(onDone, onError) {
       firestore.onSnapshot(progress, (snapshot) => onDone(Object.keys(snapshot.data()?.done ?? {})), onError);
     },
 
-    add({ title, subject, dueDate }) {
-      return firestore.addDoc(activities, {
-        title,
-        subject,
-        dueDate,
-        doneCount: 0,
+    add(name, data) {
+      return firestore.addDoc(firestore.collection(db, name), {
+        ...data,
         deletedAt: null,
-        createdAt: firestore.serverTimestamp(),
-        updatedAt: firestore.serverTimestamp(),
+        createdAt: now(),
+        updatedAt: now(),
       });
     },
 
     update,
-    trash: (id) => update(id, { deletedAt: firestore.serverTimestamp() }),
-    restore: (id) => update(id, { deletedAt: null }),
+    trash: (name, id) => update(name, id, { deletedAt: now() }),
+    restore: (name, id) => update(name, id, { deletedAt: null }),
 
     setDone(id, done) {
       const batch = firestore.writeBatch(db);
       batch.set(progress, { done: { [id]: done ? true : firestore.deleteField() } }, { merge: true });
-      batch.update(activity(id), { doneCount: firestore.increment(done ? 1 : -1) });
+      batch.update(reference(ACTIVITIES, id), { doneCount: firestore.increment(done ? 1 : -1) });
       return batch.commit();
     },
   };
 }
 
 function createLocalService(userId) {
-  let localItems = readLocal(LOCAL_STORAGE_KEY, []).filter(isValidActivity);
+  const cache = {};
+  const listeners = {};
   const progress = readLocal(LOCAL_PROGRESS_KEY, {}); // { [userId]: [activityId, ...] }
-  let listener = null;
+  let onDone = null;
 
-  const notify = () => {
+  const items = (name) => (cache[name] ??= readLocal(localKey(name), []));
+
+  const notify = (name) => {
     const doneIds = Object.values(progress).flat();
-    listener?.onItems(
-      localItems.map((item) => ({
-        ...item,
-        doneCount: doneIds.filter((id) => id === item.id).length,
-      })),
+    listeners[name]?.(
+      items(name).map((item) =>
+        name === ACTIVITIES
+          ? { ...item, doneCount: doneIds.filter((id) => id === item.id).length }
+          : { ...item },
+      ),
     );
-    listener?.onDone(progress[userId] ?? []);
   };
 
-  const save = () => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(localItems));
-    localStorage.setItem(LOCAL_PROGRESS_KEY, JSON.stringify(progress));
-    notify();
+  const save = (name) => {
+    localStorage.setItem(localKey(name), JSON.stringify(items(name)));
+    notify(name);
   };
 
-  const update = async (id, fields) => {
-    localItems = localItems.map((item) =>
+  const update = async (name, id, fields) => {
+    cache[name] = items(name).map((item) =>
       item.id === id ? { ...item, ...fields, updatedAt: new Date().toISOString() } : item,
     );
-    save();
+    save(name);
   };
 
   return {
-    subscribe(onItems, onDone) {
-      listener = { onItems, onDone };
-      notify();
+    subscribe(name, onItems) {
+      listeners[name] = onItems;
+      notify(name);
     },
 
-    async add({ title, subject, dueDate }) {
+    subscribeDone(callback) {
+      onDone = callback;
+      onDone(progress[userId] ?? []);
+    },
+
+    async add(name, data) {
       const now = new Date().toISOString();
-      localItems.push({
-        id: crypto.randomUUID(),
-        title,
-        subject,
-        dueDate,
-        deletedAt: null,
-        createdAt: now,
-        updatedAt: now,
-      });
-      save();
+      items(name).push({ id: crypto.randomUUID(), ...data, deletedAt: null, createdAt: now, updatedAt: now });
+      save(name);
     },
 
     update,
-    trash: (id) => update(id, { deletedAt: new Date().toISOString() }),
-    restore: (id) => update(id, { deletedAt: null }),
+    trash: (name, id) => update(name, id, { deletedAt: new Date().toISOString() }),
+    restore: (name, id) => update(name, id, { deletedAt: null }),
 
     async setDone(id, done) {
       const mine = (progress[userId] ?? []).filter((item) => item !== id);
       progress[userId] = done ? [...mine, id] : mine;
-      save();
+      localStorage.setItem(LOCAL_PROGRESS_KEY, JSON.stringify(progress));
+      notify(ACTIVITIES);
+      onDone?.(progress[userId]);
     },
   };
+}
+
+function localKey(name) {
+  return `${LOCAL_PREFIX}${name}:v1`;
 }
 
 // Dev: popula o localStorage com o snapshot estático na primeira execução.
 // Para voltar ao snapshot original, rode no console: resetDevData()
 async function seedLocalItems() {
-  if (localStorage.getItem(LOCAL_STORAGE_KEY) !== null || !appOptions.seedUrl) return;
+  if (localStorage.getItem(localKey(ACTIVITIES)) !== null || !appOptions.seedUrl) return;
   try {
     const response = await fetch(appOptions.seedUrl, { cache: "no-store" });
-    if (response.ok) localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(await response.json()));
+    if (response.ok) localStorage.setItem(localKey(ACTIVITIES), JSON.stringify(await response.json()));
   } catch (error) {
     console.warn("Sem snapshot de dev:", error);
   }
 }
 
 window.resetDevData = () => {
-  localStorage.removeItem(LOCAL_STORAGE_KEY);
+  Object.keys(collections).forEach((name) => localStorage.removeItem(localKey(name)));
   localStorage.removeItem(LOCAL_PROGRESS_KEY);
   location.reload();
 };
@@ -318,12 +382,23 @@ function isValidActivity(item) {
     typeof item.id === "string" &&
     typeof item.title === "string" &&
     SUBJECTS.has(item.subject) &&
-    /^\d{4}-\d{2}-\d{2}$/.test(item.dueDate)
+    DATE_PATTERN.test(item.dueDate)
   );
 }
 
-function handleItems(items) {
-  state.items = items.filter(isValidActivity);
+function isValidNotice(item) {
+  return (
+    item &&
+    typeof item.id === "string" &&
+    typeof item.title === "string" &&
+    typeof item.body === "string" &&
+    Object.hasOwn(SOURCES, item.source) &&
+    DATE_PATTERN.test(item.date)
+  );
+}
+
+function handleItems(config, items) {
+  state.data[config.name] = items.filter(config.isValid);
   scheduleRender();
 }
 
@@ -343,7 +418,7 @@ function scheduleRender() {
 }
 
 function handleRemoteError(error) {
-  console.error("Erro ao sincronizar atividades:", error);
+  console.error("Erro ao sincronizar a agenda:", error);
   setConnection("offline", "Erro de sincronização");
   elements.setupBanner.hidden = false;
   elements.setupTitle.textContent = "A agenda não está sincronizando";
@@ -352,60 +427,109 @@ function handleRemoteError(error) {
   showToast("Não foi possível atualizar os dados da turma.");
 }
 
-async function handleSubmit(event) {
-  event.preventDefault();
-  if (!isLeader() || !state.service || !elements.form.reportValidity()) return;
+// ---------- Formulários (criar e editar) ----------
 
+function readActivity() {
   const activity = {
     dueDate: elements.date.value,
-    title: normalizeTitle(elements.title.value),
+    title: normalizeText(elements.title.value),
     subject: elements.subject.value,
   };
-
   if (activity.title.length < 3 || !SUBJECTS.has(activity.subject)) {
     showToast("Revise o título e a disciplina da atividade.");
-    return;
+    return null;
   }
+  return activity;
+}
 
-  const editingId = state.editingId;
-  setFormBusy(true);
+function readNotice() {
+  const fields = elements.noticeForm.elements;
+  const fromProfessor = fields.source.value === "professor";
+  const notice = {
+    title: normalizeText(fields.title.value),
+    body: fields.body.value.trim(),
+    source: fields.source.value,
+    sourceDetail: fromProfessor ? normalizeText(fields.sourceDetail.value) : "",
+    date: fields.date.value,
+    pinned: fields.pinned.checked,
+  };
+  if (notice.title.length < 3 || !notice.body || (fromProfessor && notice.sourceDetail.length < 2)) {
+    showToast("Revise o título, o texto e a origem do aviso.");
+    return null;
+  }
+  return notice;
+}
+
+// Mostra "Professor e disciplina" só quando a origem é Professor; data padrão = hoje.
+function syncNoticeForm() {
+  const fields = elements.noticeForm.elements;
+  const fromProfessor = fields.source.value === "professor";
+  elements.noticeDetailField.hidden = !fromProfessor;
+  fields.sourceDetail.required = fromProfessor;
+  if (!fields.date.value) fields.date.value = toDateInputValue(new Date());
+}
+
+async function handleSubmit(event, config) {
+  event.preventDefault();
+  if (!isLeader() || !state.service || !config.form.reportValidity()) return;
+
+  const data = config.read();
+  if (!data) return;
+
+  const editingId = config.editingId;
+  setFormBusy(config, true);
   try {
     if (editingId) {
-      await state.service.update(editingId, activity);
+      await state.service.update(config.name, editingId, data);
       showToast("Alterações salvas.");
     } else {
-      await state.service.add(activity);
-      showToast("Atividade adicionada à agenda.");
+      await state.service.add(config.name, data);
+      showToast(config.texts.added);
     }
-    stopEdit();
-    elements.title.focus();
+    stopEdit(config);
+    config.form.elements.title.focus();
   } catch (error) {
-    console.error("Erro ao salvar atividade:", error);
+    console.error("Erro ao salvar:", error);
     showToast(editingId ? "Não foi possível salvar. Tente novamente." : "Não foi possível adicionar. Tente novamente.");
   } finally {
-    setFormBusy(false);
+    setFormBusy(config, false);
   }
 }
 
-function startEdit(activity) {
-  state.editingId = activity.id;
-  elements.date.value = activity.dueDate;
-  elements.title.value = activity.title;
-  elements.subject.value = activity.subject;
-  elements.formTitle.textContent = "Editar atividade";
-  elements.cancelEdit.hidden = false;
-  setFormBusy(false);
-  elements.form.scrollIntoView({ block: "center" });
-  elements.title.focus({ preventScroll: true });
+function startEdit(config, item) {
+  config.editingId = item.id;
+  for (const field of config.form.elements) {
+    if (!(field.name in item)) continue;
+    if (field.type === "checkbox") field.checked = Boolean(item[field.name]);
+    else field.value = item[field.name];
+  }
+  config.sync?.();
+  setEditing(config, true);
+  config.form.scrollIntoView({ block: "center" });
+  config.form.elements.title.focus({ preventScroll: true });
 }
 
-function stopEdit() {
-  state.editingId = null;
-  elements.form.reset();
-  elements.formTitle.textContent = "Nova atividade";
-  elements.cancelEdit.hidden = true;
-  setFormBusy(false);
+function stopEdit(config) {
+  config.editingId = null;
+  config.form.reset();
+  config.sync?.();
+  setEditing(config, false);
 }
+
+function setEditing(config, editing) {
+  config.form.closest("section").querySelector("h2").textContent = config.headings[editing ? 1 : 0];
+  config.form.querySelector(".cancel-edit").hidden = !editing;
+  setFormBusy(config, false);
+}
+
+function setFormBusy(config, isBusy) {
+  const labels = config.editingId ? ["Salvando…", "Salvar alterações"] : config.addLabels;
+  const submit = config.form.querySelector('[type="submit"]');
+  submit.disabled = isBusy;
+  submit.querySelector("span").textContent = labels[isBusy ? 0 : 1];
+}
+
+// ---------- Ações nas listas ----------
 
 async function handleListChange(event) {
   const checkbox = event.target.closest('input[data-action="toggle"]');
@@ -429,63 +553,103 @@ function handleRowClick(event) {
   const button = event.target.closest("button[data-action]");
   if (!button || !isLeader()) return;
 
-  const activity = state.items.find((item) => item.id === button.dataset.id);
-  if (!activity) return;
+  const config = collections[button.dataset.collection];
+  const item = config && state.data[config.name].find((entry) => entry.id === button.dataset.id);
+  if (!item) return;
 
-  if (button.dataset.action === "edit") startEdit(activity);
-  if (button.dataset.action === "delete") confirmTrash(activity);
-  if (button.dataset.action === "restore") restoreActivity(activity);
+  if (button.dataset.action === "edit") startEdit(config, item);
+  if (button.dataset.action === "delete") confirmTrash(config, item);
+  if (button.dataset.action === "restore") restoreItem(config, item);
 }
 
-function confirmTrash(activity) {
-  state.pendingDeleteId = activity.id;
-  elements.dialogDescription.textContent = `“${activity.title}” sai da agenda de todos. Ela fica na lixeira por ${TRASH_DAYS} dias e pode ser restaurada.`;
+function confirmTrash(config, item) {
+  state.pendingDelete = { config, id: item.id };
+  elements.dialogTitle.textContent = config.texts.dialogTitle;
+  elements.dialogDescription.textContent = `“${item.title}” sai da agenda de todos. ${config.texts.trashNote}`;
   elements.deleteDialog.showModal();
 }
 
 async function handleDialogClose() {
-  if (elements.deleteDialog.returnValue !== "confirm" || !state.pendingDeleteId) {
-    state.pendingDeleteId = null;
-    return;
-  }
+  const pending = state.pendingDelete;
+  state.pendingDelete = null;
+  if (elements.deleteDialog.returnValue !== "confirm" || !pending) return;
 
-  const id = state.pendingDeleteId;
-  state.pendingDeleteId = null;
+  const { config, id } = pending;
   elements.confirmDelete.disabled = true;
-
   try {
     await animateOut(id);
-    await state.service.trash(id);
-    if (state.editingId === id) stopEdit();
-    showToast("Atividade movida para a lixeira.");
+    await state.service.trash(config.name, id);
+    if (config.editingId === id) stopEdit(config);
+    showToast(config.texts.trashed);
   } catch (error) {
-    console.error("Erro ao apagar atividade:", error);
+    console.error("Erro ao apagar:", error);
     render();
-    showToast("Não foi possível apagar a atividade.");
+    showToast("Não foi possível apagar. Tente novamente.");
   } finally {
     elements.confirmDelete.disabled = false;
   }
 }
 
-async function restoreActivity(activity) {
+async function restoreItem(config, item) {
   try {
-    await animateOut(activity.id);
-    await state.service.restore(activity.id);
-    showToast("Atividade restaurada.");
+    await animateOut(item.id);
+    await state.service.restore(config.name, item.id);
+    showToast(config.texts.restored);
   } catch (error) {
-    console.error("Erro ao restaurar atividade:", error);
+    console.error("Erro ao restaurar:", error);
     render();
-    showToast("Não foi possível restaurar a atividade.");
+    showToast("Não foi possível restaurar. Tente novamente.");
   }
 }
 
 // Espera a animação de saída da linha (com movimento reduzido não há animação e segue direto).
 async function animateOut(id) {
-  const row = document.querySelector(`.activity-row[data-id="${CSS.escape(id)}"]`);
+  const selector = CSS.escape(id);
+  const row = document.querySelector(`.activity-row[data-id="${selector}"], .notice[data-id="${selector}"]`);
   if (!row) return;
   row.classList.add("is-leaving");
   await Promise.allSettled(row.getAnimations().map((animation) => animation.finished));
 }
+
+// ---------- Abas ----------
+
+function showTab(panel) {
+  elements.tabs.querySelectorAll('[role="tab"]').forEach((tab) => {
+    const selected = tab.getAttribute("aria-controls") === panel.id;
+    tab.setAttribute("aria-selected", String(selected));
+    tab.tabIndex = selected ? 0 : -1;
+    document.getElementById(tab.getAttribute("aria-controls")).hidden = !selected;
+  });
+}
+
+function handleTabClick(event) {
+  const tab = event.target.closest('[role="tab"]');
+  if (tab) showTab(document.getElementById(tab.getAttribute("aria-controls")));
+}
+
+function handleTabKey(event) {
+  if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+  const tabs = [...elements.tabs.querySelectorAll('[role="tab"]')];
+  const step = event.key === "ArrowRight" ? 1 : -1;
+  const next = tabs[(tabs.indexOf(document.activeElement) + step + tabs.length) % tabs.length];
+  next.focus();
+  next.click();
+}
+
+// Links como #historico ou #avisos abrem a aba que contém o destino antes de rolar até ele.
+function handleAnchorClick(event) {
+  const link = event.target.closest('a[href^="#"]');
+  if (link) revealTab(link.hash);
+}
+
+function revealTab(hash) {
+  const panel = hash && document.getElementById(hash.slice(1))?.closest('[role="tabpanel"]');
+  if (!panel?.hidden) return false;
+  showTab(panel);
+  return true;
+}
+
+// ---------- Filtro ----------
 
 function createFilterChips() {
   const chips = ["all", ...SUBJECTS].map((subject) => {
@@ -510,26 +674,43 @@ function handleFilterClick(event) {
   render();
 }
 
+// ---------- Render ----------
+
 function render() {
+  renderActivities();
+  renderNotices();
+  state.justToggled = null;
+  state.lastCounts = new Map(state.data[ACTIVITIES].map((item) => [item.id, doneCountOf(item)]));
+}
+
+function renderActivities() {
   const today = toDateInputValue(new Date());
+  const items = state.data[ACTIVITIES];
   const inFilter = (item) => state.filter === "all" || item.subject === state.filter;
-  const active = state.items.filter((item) => !item.deletedAt && inFilter(item));
+  const active = items.filter((item) => !item.deletedAt && inFilter(item));
   const upcoming = active.filter((item) => item.dueDate >= today).sort((a, b) => compareDates(a, b, 1));
   const history = active.filter((item) => item.dueDate < today).sort((a, b) => compareDates(a, b, -1));
-  const trash = state.items
-    .filter((item) => item.deletedAt && Date.now() - toMillis(item.deletedAt) < TRASH_DAYS * DAY_MS)
-    .sort((a, b) => toMillis(b.deletedAt) - toMillis(a.deletedAt));
+  const trash = items.filter(isInTrash).sort(byDeletedAt);
 
-  renderList(elements.activitiesList, upcoming, "upcoming");
-  renderList(elements.historyList, history, "history");
-  renderList(elements.trashList, isLeader() ? trash : [], "trash");
+  renderActivityList(elements.activitiesList, upcoming, "upcoming");
+  renderActivityList(elements.historyList, history, "history");
+  renderActivityList(elements.trashList, isLeader() ? trash : [], "trash");
 
   setCount(elements.activitiesCount, elements.activitiesEmpty, upcoming.length, "atividade pendente", "atividades pendentes");
   setCount(elements.historyCount, elements.historyEmpty, history.length, "atividade passada", "atividades passadas");
   setCount(elements.trashCount, elements.trashEmpty, trash.length, "atividade na lixeira", "atividades na lixeira");
+}
 
-  state.justToggled = null;
-  state.lastCounts = new Map(state.items.map((item) => [item.id, doneCountOf(item)]));
+function renderNotices() {
+  const items = state.data[NOTICES];
+  const active = items.filter((item) => !item.deletedAt).sort(compareNotices);
+  const trash = items.filter(isInTrash).sort(byDeletedAt);
+
+  renderNoticeList(elements.noticesList, active, false);
+  renderNoticeList(elements.noticeTrashList, isLeader() ? trash : [], true);
+
+  setCount(elements.noticesCount, elements.noticesEmpty, active.length, "aviso", "avisos");
+  setCount(elements.noticeTrashCount, elements.noticeTrashEmpty, trash.length, "aviso na lixeira", "avisos na lixeira");
 }
 
 function setCount(badge, empty, total, singular, plural) {
@@ -538,8 +719,30 @@ function setCount(badge, empty, total, singular, plural) {
   empty.hidden = total !== 0;
 }
 
-function renderList(list, items, kind) {
-  const before = new Set([...list.children].map((child) => child.dataset.id));
+function isInTrash(item) {
+  return Boolean(item.deletedAt) && Date.now() - toMillis(item.deletedAt) < TRASH_DAYS * DAY_MS;
+}
+
+function byDeletedAt(a, b) {
+  return toMillis(b.deletedAt) - toMillis(a.deletedAt);
+}
+
+// Fixados primeiro, depois os mais recentes.
+function compareNotices(a, b) {
+  return (
+    Number(Boolean(b.pinned)) - Number(Boolean(a.pinned)) ||
+    b.date.localeCompare(a.date) ||
+    (toMillis(b.createdAt) || 0) - (toMillis(a.createdAt) || 0)
+  );
+}
+
+// Linhas que não estavam na lista antes ganham a animação de entrada.
+function previousIds(list) {
+  return new Set([...list.children].map((child) => child.dataset.id));
+}
+
+function renderActivityList(list, items, kind) {
+  const before = previousIds(list);
   const fragment = document.createDocumentFragment();
   let group = null;
 
@@ -560,12 +763,26 @@ function renderList(list, items, kind) {
       createDateBlock(activity.dueDate),
       createActivityCopy(activity, kind),
       createSubjectBadge(activity.subject),
-      createRowActions(activity, kind),
+      createRowActions(activity, ACTIVITIES, kind === "trash"),
     );
     fragment.append(row);
   });
 
   list.replaceChildren(fragment);
+}
+
+function renderNoticeList(list, items, inTrash) {
+  const before = previousIds(list);
+  const cards = items.map((notice) => {
+    const card = document.createElement("li");
+    card.className = "notice";
+    card.dataset.id = notice.id;
+    card.classList.toggle("is-pinned", Boolean(notice.pinned) && !inTrash);
+    card.classList.toggle("is-new", before.size > 0 && !before.has(notice.id));
+    card.append(createDateBlock(notice.date), createNoticeCopy(notice, inTrash), createRowActions(notice, NOTICES, inTrash));
+    return card;
+  });
+  list.replaceChildren(...cards);
 }
 
 function createGroupLabel(text) {
@@ -634,12 +851,45 @@ function createActivityCopy(activity, kind) {
   copy.append(title, meta);
 
   if (kind === "trash") {
-    meta.textContent = `Pode ser restaurada até ${formatShortDate(toMillis(activity.deletedAt) + TRASH_DAYS * DAY_MS)}`;
+    meta.textContent = `Pode ser restaurada até ${formatRestoreDate(activity)}`;
     return copy;
   }
 
   meta.append(createDue(activity), createProgressText(activity));
   if (kind === "upcoming") copy.append(createProgressBar(activity));
+  return copy;
+}
+
+function createNoticeCopy(notice, inTrash) {
+  const copy = document.createElement("div");
+  copy.className = "notice-copy";
+
+  const meta = document.createElement("p");
+  meta.className = "notice-meta";
+  if (inTrash) {
+    meta.textContent = `Pode ser restaurado até ${formatRestoreDate(notice)}`;
+  } else {
+    const source = document.createElement("span");
+    source.textContent =
+      notice.source === "professor" ? `Professor — ${notice.sourceDetail}` : SOURCES.lideres;
+    meta.append(source);
+    if (notice.pinned) {
+      const pin = document.createElement("span");
+      pin.className = "pin-label";
+      pin.textContent = "Fixado";
+      meta.prepend(pin);
+    }
+  }
+
+  const title = document.createElement("h3");
+  title.className = "notice-title";
+  title.textContent = notice.title;
+
+  const body = document.createElement("p");
+  body.className = "notice-body";
+  body.textContent = notice.body;
+
+  copy.append(meta, title, body);
   return copy;
 }
 
@@ -712,26 +962,26 @@ function createSubjectBadge(subject) {
   return badge;
 }
 
-function createRowActions(activity, kind) {
+function createRowActions(item, collection, inTrash) {
   if (!isLeader()) return createSpacer("row-spacer");
 
   const actions = document.createElement("div");
   actions.className = "row-actions";
-  const buttons =
-    kind === "trash"
-      ? [["restore", "Restaurar"]]
-      : [
-          ["edit", "Editar"],
-          ["delete", "Apagar"],
-        ];
+  const buttons = inTrash
+    ? [["restore", "Restaurar"]]
+    : [
+        ["edit", "Editar"],
+        ["delete", "Apagar"],
+      ];
 
   buttons.forEach(([action, verb]) => {
     const button = document.createElement("button");
     button.className = "icon-button";
     button.type = "button";
-    button.dataset.id = activity.id;
+    button.dataset.id = item.id;
+    button.dataset.collection = collection;
     button.dataset.action = action;
-    button.setAttribute("aria-label", `${verb} ${activity.title}`);
+    button.setAttribute("aria-label", `${verb} ${item.title}`);
     button.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="${ICONS[action]}"/></svg>`;
     actions.append(button);
   });
@@ -745,13 +995,15 @@ function createSpacer(className) {
   return spacer;
 }
 
+// ---------- Utilitários de data e texto ----------
+
 function compareDates(a, b, direction) {
   const dateComparison = a.dueDate.localeCompare(b.dueDate) * direction;
   if (dateComparison !== 0) return dateComparison;
   return a.title.localeCompare(b.title, "pt-BR");
 }
 
-function normalizeTitle(value) {
+function normalizeText(value) {
   return value.trim().replace(/\s+/g, " ");
 }
 
@@ -787,8 +1039,10 @@ function formatLongDate(value) {
   }).format(parseDate(value));
 }
 
-function formatShortDate(millis) {
-  return new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long" }).format(millis);
+function formatRestoreDate(item) {
+  return new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long" }).format(
+    toMillis(item.deletedAt) + TRASH_DAYS * DAY_MS,
+  );
 }
 
 function toDateInputValue(date) {
@@ -796,12 +1050,6 @@ function toDateInputValue(date) {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
-}
-
-function setFormBusy(isBusy) {
-  const labels = state.editingId ? ["Salvando…", "Salvar alterações"] : ["Adicionando…", "Adicionar atividade"];
-  elements.submit.disabled = isBusy;
-  elements.submit.querySelector("span").textContent = isBusy ? labels[0] : labels[1];
 }
 
 function setConnection(mode, label) {

@@ -39,7 +39,7 @@
         <nav class="main-nav only-user" aria-label="Navegação principal">
           <a href="#atividades">Atividades</a>
           <a href="#historico">Histórico</a>
-          <a class="only-lider" href="#lixeira">Lixeira</a>
+          <a href="#avisos">Avisos</a>
           <a class="nav-primary only-lider" href="#inserir">+ Inserir</a>
           <span class="user-name" id="user-name"></span>
           <button class="logout-button" id="logout-button" type="button">Sair</button>
@@ -115,6 +115,31 @@
           </form>
         </section>
 
+        <div class="tabs only-user" id="tabs" role="tablist" aria-label="Seções da agenda">
+          <button
+            class="tab"
+            id="tab-atividades"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="painel-atividades"
+          >
+            Atividades
+          </button>
+          <button
+            class="tab"
+            id="tab-avisos"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="painel-avisos"
+            tabindex="-1"
+          >
+            Avisos
+          </button>
+        </div>
+
+        <div class="tab-panel" id="painel-atividades" role="tabpanel" aria-labelledby="tab-atividades">
         <section class="insert-panel only-lider" id="inserir" aria-labelledby="insert-title">
           <div class="section-intro">
             <p class="section-number">01 · INSERIR</p>
@@ -125,7 +150,7 @@
           <form class="activity-form" id="activity-form">
             <div class="field field-date">
               <label for="activity-date">Data de entrega</label>
-              <input id="activity-date" name="date" type="date" required />
+              <input id="activity-date" name="dueDate" type="date" required />
             </div>
 
             <div class="field field-title">
@@ -155,15 +180,13 @@
               </select>
             </div>
 
-            <button class="submit-button" id="submit-button" type="submit">
+            <button class="submit-button" type="submit">
               <span>Adicionar atividade</span>
               <svg viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </button>
-            <button class="text-button cancel-edit" id="cancel-edit" type="button" hidden>
-              Cancelar edição
-            </button>
+            <button class="text-button cancel-edit" type="button" hidden>Cancelar edição</button>
           </form>
         </section>
 
@@ -255,6 +278,128 @@
             </div>
           </div>
         </section>
+        </div>
+
+        <div
+          class="tab-panel"
+          id="painel-avisos"
+          role="tabpanel"
+          aria-labelledby="tab-avisos"
+          hidden
+        >
+          <section class="insert-panel only-lider" id="publicar-aviso" aria-labelledby="notice-form-title">
+            <div class="section-intro">
+              <p class="section-number">01 · PUBLICAR</p>
+              <h2 id="notice-form-title">Novo aviso</h2>
+              <p>Avisos dos líderes ou repassados dos professores.</p>
+            </div>
+
+            <form class="activity-form notice-form" id="notice-form">
+              <div class="field field-wide">
+                <label for="notice-title">Título do aviso</label>
+                <input
+                  id="notice-title"
+                  name="title"
+                  type="text"
+                  placeholder="Ex.: Aula de quinta na sala 402…"
+                  minlength="3"
+                  maxlength="120"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+
+              <div class="field field-wide">
+                <label for="notice-body">Texto</label>
+                <textarea id="notice-body" name="body" rows="4" maxlength="2000" required></textarea>
+              </div>
+
+              <div class="field">
+                <label for="notice-source">Origem</label>
+                <select id="notice-source" name="source">
+                  <option value="lideres">Líderes</option>
+                  <option value="professor">Professor</option>
+                </select>
+              </div>
+
+              <div class="field" id="notice-detail-field" hidden>
+                <label for="notice-detail">Professor e disciplina</label>
+                <input
+                  id="notice-detail"
+                  name="sourceDetail"
+                  type="text"
+                  placeholder="Ex.: Prof. Ana, GDE…"
+                  maxlength="80"
+                  autocomplete="off"
+                />
+              </div>
+
+              <div class="field">
+                <label for="notice-date">Data</label>
+                <input id="notice-date" name="date" type="date" required />
+              </div>
+
+              <label class="field-check">
+                <input name="pinned" type="checkbox" />
+                Fixar no topo
+              </label>
+
+              <button class="submit-button" type="submit">
+                <span>Publicar aviso</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </button>
+              <button class="text-button cancel-edit" type="button" hidden>Cancelar edição</button>
+            </form>
+          </section>
+
+          <section class="activity-section only-user" id="avisos" aria-labelledby="notices-title">
+            <div class="section-heading">
+              <div>
+                <p class="section-number">02 · AVISOS</p>
+                <h2 id="notices-title">Avisos da turma</h2>
+              </div>
+              <span class="count-badge" id="notices-count">0</span>
+            </div>
+
+            <div class="table-card">
+              <ul class="notice-list" id="notices-list"></ul>
+              <div class="empty-state" id="notices-empty" hidden>
+                <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+                <div>
+                  <strong>Nenhum aviso por enquanto</strong>
+                  <p>Quando os líderes publicarem um aviso, ele aparecerá aqui.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="activity-section history-section only-lider"
+            id="lixeira-avisos"
+            aria-labelledby="notice-trash-title"
+          >
+            <div class="section-heading">
+              <div>
+                <p class="section-number">03 · LIXEIRA</p>
+                <h2 id="notice-trash-title">Avisos apagados</h2>
+              </div>
+              <span class="count-badge count-badge-muted" id="notice-trash-count">0</span>
+            </div>
+
+            <div class="table-card history-card trash-card">
+              <ul class="notice-list" id="notice-trash-list"></ul>
+              <div class="empty-state" id="notice-trash-empty" hidden>
+                <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+                <div>
+                  <strong>A lixeira está vazia</strong>
+                  <p>Avisos apagados ficam aqui por 7 dias e podem ser restaurados.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
       </div>
     </main>
 
