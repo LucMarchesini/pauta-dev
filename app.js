@@ -7,6 +7,8 @@ const SOURCES = { lideres: "Líderes", professor: "Professor" };
 const TYPES = { lab: "Laboratório", workshop: "Workshop", vaga: "Vaga/Oportunidade", outro: "Outro" };
 const MONTHS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+const TITLE_PROBLEM = "Use pelo menos 3 caracteres.";
+const LINK_PROBLEM = "O link precisa começar com http:// ou https://.";
 const CLASS_SIZE = appOptions.classSize;
 const DAY_MS = 86_400_000;
 const TRASH_DAYS = 7;
@@ -145,7 +147,7 @@ async function start() {
     return;
   }
 
-  createChips(elements.subjectFilter, ACTIVITIES, "Todas", [...SUBJECTS].map((subject) => [subject, subject]));
+  createChips(elements.subjectFilter, ACTIVITIES, "Todas", [...SUBJECTS].map((subject) => [subject, subject]), false);
   createChips(elements.typeFilter, EVENTS, "Todos", Object.entries(TYPES));
   syncNoticeForm();
   if (revealTab(location.hash)) document.getElementById(location.hash.slice(1))?.scrollIntoView();
@@ -168,6 +170,10 @@ async function start() {
 }
 
 function bindEvents() {
+  [elements.loginForm, ...Object.values(collections).map((config) => config.form)].forEach((form) => {
+    form.addEventListener("input", handleFieldInput);
+    form.addEventListener("change", handleFieldInput);
+  });
   Object.values(collections).forEach((config) => {
     config.form.addEventListener("submit", (event) => handleSubmit(event, config));
     config.form.querySelector(".cancel-edit").addEventListener("click", () => {
@@ -196,10 +202,17 @@ function isLeader() {
 
 async function handleLogin(event) {
   event.preventDefault();
+  const problem = showProblems(elements.loginForm, {});
+  if (problem) {
+    showToast(problem);
+    return;
+  }
   try {
     await login(elements.loginEmail.value);
     location.reload();
   } catch (error) {
+    setFieldError(elements.loginEmail, error.message);
+    elements.loginEmail.focus();
     showToast(error.message);
   }
 }
@@ -292,24 +305,28 @@ function handleRemoteError(error) {
 
 // ---------- Formulários (criar e editar) ----------
 
+// Cada read devolve { data, problems }: problems = { nomeDoCampo: mensagem } para o que
+// as restrições do HTML não cobrem (texto só com espaços, link fora de http/https…).
 function readActivity() {
   const fields = elements.activityForm.elements;
-  const activity = {
+  const data = {
     dueDate: fields.dueDate.value,
     title: normalizeText(fields.title.value),
     subject: fields.subject.value,
   };
-  if (activity.title.length < 3 || !SUBJECTS.has(activity.subject)) {
-    showToast("Revise o título e a disciplina da atividade.");
-    return null;
-  }
-  return activity;
+  return {
+    data,
+    problems: {
+      title: data.title.length < 3 && TITLE_PROBLEM,
+      subject: !SUBJECTS.has(data.subject) && "Selecione a disciplina.",
+    },
+  };
 }
 
 function readNotice() {
   const fields = elements.noticeForm.elements;
   const fromProfessor = fields.source.value === "professor";
-  const notice = {
+  const data = {
     title: normalizeText(fields.title.value),
     body: fields.body.value.trim(),
     source: fields.source.value,
@@ -317,34 +334,36 @@ function readNotice() {
     date: fields.date.value,
     pinned: fields.pinned.checked,
   };
-  if (notice.title.length < 3 || !notice.body || (fromProfessor && notice.sourceDetail.length < 2)) {
-    showToast("Revise o título, o texto e a origem do aviso.");
-    return null;
-  }
-  return notice;
+  return {
+    data,
+    problems: {
+      title: data.title.length < 3 && TITLE_PROBLEM,
+      body: !data.body && "Escreva o texto do aviso.",
+      sourceDetail: fromProfessor && data.sourceDetail.length < 2 && "Informe o professor e a disciplina.",
+    },
+  };
 }
 
 function readEvent() {
   const fields = elements.eventForm.elements;
   const link = fields.link.value.trim();
   const url = link ? safeUrl(link) : null;
-  const event = {
+  const data = {
     type: fields.type.value,
     title: normalizeText(fields.title.value),
     description: fields.description.value.trim(),
     date: fields.date.value,
     link: url ? url.href : "",
   };
-  if (event.title.length < 3 || !event.description || !Object.hasOwn(TYPES, event.type)) {
-    showToast("Revise o tipo, o título e a descrição do evento.");
-    return null;
-  }
-  if (link && !url) {
-    showToast("O link precisa começar com http:// ou https://.");
-    fields.link.focus();
-    return null;
-  }
-  return event;
+  return {
+    data,
+    problems: {
+      type: !Object.hasOwn(TYPES, data.type) && "Selecione o tipo.",
+      title: data.title.length < 3 && TITLE_PROBLEM,
+      description: !data.description && "Escreva uma descrição.",
+      link: link && !url && LINK_PROBLEM,
+    },
+  };
 }
 
 // Mostra "Professor e disciplina" só quando a origem é Professor; data padrão = hoje.
@@ -353,15 +372,76 @@ function syncNoticeForm() {
   const fromProfessor = fields.source.value === "professor";
   elements.noticeDetailField.hidden = !fromProfessor;
   fields.sourceDetail.required = fromProfessor;
+  if (!fromProfessor) setFieldError(fields.sourceDetail, "");
   if (!fields.date.value) fields.date.value = todayValue();
+}
+
+// ---------- Erros junto aos campos ----------
+
+// Marca cada campo inválido (restrição do HTML ou problems) com aria-invalid e uma
+// mensagem ligada por aria-describedby, foca o primeiro e devolve a mensagem dele.
+function showProblems(form, problems) {
+  let first = null;
+  let firstMessage = "";
+  for (const field of form.elements) {
+    if (!field.name || !field.willValidate) continue;
+    const message = constraintProblem(field) || problems[field.name] || "";
+    setFieldError(field, message);
+    if (message && !first) [first, firstMessage] = [field, message];
+  }
+  first?.focus();
+  return firstMessage;
+}
+
+// Mensagens próprias (em português) para as restrições do HTML.
+function constraintProblem(field) {
+  const { validity } = field;
+  if (validity.valid) return "";
+  if (validity.valueMissing) return field.tagName === "SELECT" ? "Selecione uma opção." : "Preencha este campo.";
+  if (validity.tooShort) return `Use pelo menos ${field.minLength} caracteres.`;
+  if (field.type === "email") return "Digite um e-mail válido.";
+  if (field.type === "url") return LINK_PROBLEM;
+  return "Revise este campo.";
+}
+
+function setFieldError(field, message) {
+  const id = `${field.id}-error`;
+  let error = document.getElementById(id);
+  if (!message) {
+    error?.remove();
+    field.removeAttribute("aria-invalid");
+    field.removeAttribute("aria-describedby");
+    return;
+  }
+  if (!error) {
+    error = createText("p", "", "field-error");
+    error.id = id;
+    field.closest(".field").append(error);
+  }
+  error.textContent = message;
+  field.setAttribute("aria-invalid", "true");
+  field.setAttribute("aria-describedby", id);
+}
+
+function clearProblems(form) {
+  for (const field of form.elements) if (field.id) setFieldError(field, "");
+}
+
+// Editar um campo marcado tira a marcação dele.
+function handleFieldInput(event) {
+  if (event.target.hasAttribute("aria-invalid")) setFieldError(event.target, "");
 }
 
 async function handleSubmit(event, config) {
   event.preventDefault();
-  if (!isLeader() || !state.service || !config.form.reportValidity()) return;
+  if (!isLeader() || !state.service) return;
 
-  const data = config.read();
-  if (!data) return;
+  const { data, problems } = config.read();
+  const problem = showProblems(config.form, problems);
+  if (problem) {
+    showToast(problem);
+    return;
+  }
 
   const editingId = config.editingId;
   setFormBusy(config, true);
@@ -404,6 +484,7 @@ function stopEdit(config) {
 }
 
 function setEditing(config, editing) {
+  clearProblems(config.form);
   config.form.closest("section").querySelector("h2").textContent = config.headings[editing ? 1 : 0];
   config.form.querySelector(".cancel-edit").hidden = !editing;
   setFormBusy(config, false);
@@ -539,7 +620,8 @@ function revealTab(hash) {
 // ---------- Filtro ----------
 
 // options: [[valor, rótulo], ...]. O grupo guarda a coleção que ele filtra.
-function createChips(group, collection, allLabel, options) {
+// translate = false para rótulos que são siglas (disciplinas).
+function createChips(group, collection, allLabel, options, translate = true) {
   group.dataset.collection = collection;
   const chips = [["all", allLabel], ...options].map(([value, label]) => {
     const chip = document.createElement("button");
@@ -547,6 +629,7 @@ function createChips(group, collection, allLabel, options) {
     chip.className = "chip";
     chip.dataset.value = value;
     chip.textContent = label;
+    if (!translate && value !== "all") chip.translate = false;
     chip.setAttribute("aria-pressed", String(value === state.filters[collection]));
     return chip;
   });
@@ -674,7 +757,7 @@ function renderActivityList(key, items, kind) {
       kind === "trash" ? createSpacer("task-check") : createCheckbox(activity),
       createDateBlock(activity.dueDate),
       createActivityCopy(activity, kind),
-      createText("span", activity.subject, "subject-badge"),
+      createSubjectBadge(activity.subject),
       createRowActions(activity, ACTIVITIES, kind === "trash"),
     );
     fragment.append(row);
@@ -820,6 +903,12 @@ function createDue(activity) {
   if (!done && days <= 2) due.dataset.tone = "soon";
   else if (!done && weekOffset(activity.dueDate) === 0) due.dataset.tone = "week";
   return due;
+}
+
+function createSubjectBadge(subject) {
+  const badge = createText("span", subject, "subject-badge");
+  badge.translate = false;
+  return badge;
 }
 
 function createProgressText(activity) {

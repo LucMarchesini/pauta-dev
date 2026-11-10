@@ -80,6 +80,16 @@ input[type="checkbox"] {
   cursor: pointer;
 }
 
+/* Sem atraso de toque duplo (zoom) nos controles. */
+a,
+button,
+input,
+label,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
 button:focus-visible,
 input:focus-visible,
 select:focus-visible,
@@ -470,6 +480,19 @@ a {
 
 .field input[type="date"] {
   color-scheme: dark;
+}
+
+/* Erro junto ao campo (app.js: aria-invalid + aria-describedby). Depois de
+   :hover/:focus para a borda continuar vermelha no campo focado. */
+.field :is(input, select, textarea)[aria-invalid="true"] {
+  border-color: #ff7d7d;
+}
+
+.field-error {
+  margin: 0;
+  color: #ff7d7d;
+  font-size: 0.78rem;
+  font-weight: 700;
 }
 
 .field-wide,
@@ -1130,6 +1153,7 @@ a {
   border-radius: 20px;
   box-shadow: 0 28px 90px rgba(0, 0, 0, 0.28);
   padding: 0;
+  overscroll-behavior: contain;
 }
 
 .confirm-dialog::backdrop {
@@ -1246,19 +1270,16 @@ a {
   animation: check-pop var(--dur-media) var(--ease-padrao);
 }
 
-/* A ordem destas três regras importa: numa linha com .is-new e .is-leaving,
-   a atividade usa row-out e o cartão (.entry) mantém row-in. */
-.activity-row.is-new {
+/* .is-leaving vem depois de .is-new: uma linha recém-criada e já apagada
+   também sai com animação. */
+.activity-row.is-new,
+.entry.is-new {
   animation: row-in var(--dur-media) var(--ease-padrao);
 }
 
 .activity-row.is-leaving,
 .entry.is-leaving {
   animation: row-out var(--dur-media) var(--ease-saida) forwards;
-}
-
-.entry.is-new {
-  animation: row-in var(--dur-media) var(--ease-padrao);
 }
 
 .tab-panel:not([hidden]) {

@@ -21,7 +21,7 @@
 
     <header class="site-header">
       <div class="header-inner">
-        <a class="brand" href="#inicio" aria-label="Voltar ao início da Agenda B">
+        <a class="brand" href="#inicio" translate="no" aria-label="Voltar ao início da Agenda B">
           <img
             class="brand-logo"
             src="assets/insper-logo.svg"
@@ -103,7 +103,7 @@
             <p>A agenda é exclusiva para a turma. Use seu e-mail do Insper.</p>
           </div>
 
-          <form class="activity-form login-form" id="login-form">
+          <form class="activity-form login-form" id="login-form" novalidate>
             <div class="field">
               <label for="login-email">E-mail do Insper</label>
               <input
@@ -112,6 +112,7 @@
                 type="email"
                 placeholder="nome@al.insper.edu.br"
                 autocomplete="email"
+                spellcheck="false"
                 required
               />
             </div>
@@ -175,7 +176,7 @@
               <p>Adicione apenas informações confirmadas com o professor.</p>
             </div>
 
-            <form class="activity-form" id="activity-form">
+            <form class="activity-form" id="activity-form" novalidate>
               <div class="field">
                 <label for="activity-date">Data de entrega</label>
                 <input id="activity-date" name="dueDate" type="date" required />
@@ -199,12 +200,12 @@
                 <label for="activity-subject">Disciplina</label>
                 <select id="activity-subject" name="subject" required>
                   <option value="" selected disabled>Selecionar</option>
-                  <option value="GDE">GDE</option>
-                  <option value="DesSoft">DesSoft</option>
-                  <option value="InstruMed">InstruMed</option>
-                  <option value="DesProd">DesProd</option>
-                  <option value="Tópicos">Tópicos</option>
-                  <option value="ModSim">ModSim</option>
+                  <option value="GDE" translate="no">GDE</option>
+                  <option value="DesSoft" translate="no">DesSoft</option>
+                  <option value="InstruMed" translate="no">InstruMed</option>
+                  <option value="DesProd" translate="no">DesProd</option>
+                  <option value="Tópicos" translate="no">Tópicos</option>
+                  <option value="ModSim" translate="no">ModSim</option>
                 </select>
               </div>
 
@@ -320,7 +321,7 @@
               <p>Avisos dos líderes ou repassados dos professores.</p>
             </div>
 
-            <form class="activity-form" id="notice-form">
+            <form class="activity-form" id="notice-form" novalidate>
               <div class="field field-wide">
                 <label for="notice-title">Título do aviso</label>
                 <input
@@ -441,7 +442,7 @@
               <p>Laboratórios, workshops e oportunidades para a turma.</p>
             </div>
 
-            <form class="activity-form" id="event-form">
+            <form class="activity-form" id="event-form" novalidate>
               <div class="field">
                 <label for="event-type">Tipo</label>
                 <select id="event-type" name="type" required>
@@ -563,7 +564,7 @@
     <footer class="site-footer">
       <div class="footer-inner">
         <div>
-          <strong>Agenda B</strong>
+          <strong translate="no">Agenda B</strong>
           <p>Feita para simplificar a rotina da turma.</p>
         </div>
         <p class="footer-credit">
