@@ -662,7 +662,7 @@ a {
 
 .activity-row.is-done .activity-title,
 .trash-card .activity-title,
-.trash-card .notice-title {
+.trash-card .entry-title {
   text-decoration: line-through;
   text-decoration-color: #8b8b89;
   text-decoration-thickness: 1.5px;
@@ -904,6 +904,11 @@ a {
     gap: 20px;
   }
 
+  .user-name,
+  .main-nav a[href="#historico"] {
+    display: none;
+  }
+
   .hero-inner {
     min-height: 340px;
     grid-template-columns: minmax(0, 1fr) 150px;
@@ -1072,36 +1077,9 @@ a {
     font-size: 0.7rem;
   }
 
-  .row-actions {
-    flex-direction: column;
-    gap: 2px;
-  }
-
-  .tabs {
-    gap: 22px;
-    margin-bottom: 8px;
-  }
-
-  .tab {
-    font-size: 1.3rem;
-  }
-
-  .notice {
-    grid-template-columns: 52px minmax(0, 1fr) 38px;
-    padding: 18px 14px;
-  }
-
-  .notice-title {
-    font-size: 1.22rem;
-  }
-
   .icon-button {
     width: 36px;
     height: 36px;
-  }
-
-  .week-group {
-    padding-inline: 14px;
   }
 
   .subject-badge {
@@ -1338,11 +1316,11 @@ body[data-role="lider"] {
 }
 
 .activity-row.is-leaving,
-.notice.is-leaving {
+.entry.is-leaving {
   animation: row-out var(--dur-media) var(--ease-saida) forwards;
 }
 
-.notice.is-new {
+.entry.is-new {
   animation: row-in var(--dur-media) var(--ease-padrao);
 }
 
@@ -1389,7 +1367,7 @@ body[data-role="lider"] {
   }
 }
 
-/* Fase 3: abas e avisos. */
+/* Fase 3 e 4: abas, avisos e eventos (cartões .entry). */
 .tabs {
   display: flex;
   gap: 30px;
@@ -1462,13 +1440,13 @@ body[data-role="lider"] {
   accent-color: var(--red);
 }
 
-.notice-list {
+.entry-list {
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.notice {
+.entry {
   display: grid;
   grid-template-columns: 112px minmax(0, 1fr) var(--actions-col);
   align-items: start;
@@ -1476,19 +1454,19 @@ body[data-role="lider"] {
   padding: 24px 22px;
 }
 
-.notice + .notice {
+.entry + .entry {
   border-top: 1px solid #ececea;
 }
 
-.notice.is-pinned {
+.entry.is-pinned {
   box-shadow: inset 3px 0 0 var(--red);
 }
 
-.notice .date-block {
+.entry .date-block {
   padding-top: 2px;
 }
 
-.notice-meta {
+.entry-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 2px 12px;
@@ -1498,11 +1476,29 @@ body[data-role="lider"] {
   font-weight: 750;
 }
 
-.pin-label {
+.pin-label,
+.type-label {
   color: var(--red-text);
 }
 
-.notice-title {
+.entry-link {
+  display: inline-block;
+  margin-top: 10px;
+  color: var(--red-text);
+  font-size: 0.84rem;
+  font-weight: 800;
+  text-underline-offset: 3px;
+}
+
+.entry-link::after {
+  content: " ↗";
+}
+
+.entry-link:hover {
+  color: var(--red-dark);
+}
+
+.entry-title {
   margin: 6px 0 0;
   font-family: "Iowan Old Style", Baskerville, Georgia, serif;
   font-size: 1.45rem;
@@ -1512,11 +1508,11 @@ body[data-role="lider"] {
   text-wrap: balance;
 }
 
-.notice-copy {
+.entry-copy {
   overflow-wrap: anywhere;
 }
 
-.notice-body {
+.entry-body {
   max-width: 68ch;
   margin: 8px 0 0;
   color: #3d3d3d;
@@ -1524,6 +1520,36 @@ body[data-role="lider"] {
   white-space: pre-line;
 }
 
-.trash-card .notice-body {
+.trash-card .entry-body {
   color: #6b6b69;
+}
+
+/* Celular: componentes das Fases 2 a 4. Fica no fim para vencer as regras base acima. */
+@media (max-width: 680px) {
+  .row-actions {
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .week-group {
+    padding-inline: 14px;
+  }
+
+  .tabs {
+    gap: 22px;
+    margin-bottom: 8px;
+  }
+
+  .tab {
+    font-size: 1.3rem;
+  }
+
+  .entry {
+    grid-template-columns: 52px minmax(0, 1fr) 38px;
+    padding: 18px 14px;
+  }
+
+  .entry-title {
+    font-size: 1.22rem;
+  }
 }

@@ -40,6 +40,7 @@
           <a href="#atividades">Atividades</a>
           <a href="#historico">Histórico</a>
           <a href="#avisos">Avisos</a>
+          <a href="#eventos">Eventos</a>
           <a class="nav-primary only-lider" href="#inserir">+ Inserir</a>
           <span class="user-name" id="user-name"></span>
           <button class="logout-button" id="logout-button" type="button">Sair</button>
@@ -136,6 +137,17 @@
             tabindex="-1"
           >
             Avisos
+          </button>
+          <button
+            class="tab"
+            id="tab-eventos"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="painel-eventos"
+            tabindex="-1"
+          >
+            Eventos
           </button>
         </div>
 
@@ -364,7 +376,7 @@
             </div>
 
             <div class="table-card">
-              <ul class="notice-list" id="notices-list"></ul>
+              <ul class="entry-list" id="notices-list"></ul>
               <div class="empty-state" id="notices-empty" hidden>
                 <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
                 <div>
@@ -389,12 +401,143 @@
             </div>
 
             <div class="table-card history-card trash-card">
-              <ul class="notice-list" id="notice-trash-list"></ul>
+              <ul class="entry-list" id="notice-trash-list"></ul>
               <div class="empty-state" id="notice-trash-empty" hidden>
                 <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
                 <div>
                   <strong>A lixeira está vazia</strong>
                   <p>Avisos apagados ficam aqui por 7 dias e podem ser restaurados.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <div
+          class="tab-panel"
+          id="painel-eventos"
+          role="tabpanel"
+          aria-labelledby="tab-eventos"
+          hidden
+        >
+          <section class="insert-panel only-lider" id="publicar-evento" aria-labelledby="event-form-title">
+            <div class="section-intro">
+              <p class="section-number">01 · PUBLICAR</p>
+              <h2 id="event-form-title">Novo evento</h2>
+              <p>Laboratórios, workshops e oportunidades para a turma.</p>
+            </div>
+
+            <form class="activity-form" id="event-form">
+              <div class="field">
+                <label for="event-type">Tipo</label>
+                <select id="event-type" name="type" required>
+                  <option value="" selected disabled>Selecionar</option>
+                  <option value="lab">Laboratório</option>
+                  <option value="workshop">Workshop</option>
+                  <option value="vaga">Vaga/Oportunidade</option>
+                  <option value="outro">Outro</option>
+                </select>
+              </div>
+
+              <div class="field">
+                <label for="event-title">Título do evento</label>
+                <input
+                  id="event-title"
+                  name="title"
+                  type="text"
+                  placeholder="Ex.: Lab de InstruMed na sala 105…"
+                  minlength="3"
+                  maxlength="120"
+                  autocomplete="off"
+                  required
+                />
+              </div>
+
+              <div class="field">
+                <label for="event-date">Data</label>
+                <input id="event-date" name="date" type="date" required />
+              </div>
+
+              <div class="field field-wide">
+                <label for="event-description">Descrição curta</label>
+                <textarea
+                  id="event-description"
+                  name="description"
+                  rows="3"
+                  maxlength="280"
+                  required
+                ></textarea>
+              </div>
+
+              <div class="field field-wide">
+                <label for="event-link">Link (opcional)</label>
+                <input
+                  id="event-link"
+                  name="link"
+                  type="url"
+                  inputmode="url"
+                  placeholder="https://…"
+                  pattern="https?://.+"
+                  title="Use um link que comece com http:// ou https://"
+                  maxlength="500"
+                  autocomplete="off"
+                  spellcheck="false"
+                />
+              </div>
+
+              <button class="submit-button" type="submit">
+                <span>Publicar evento</span>
+                <svg viewBox="0 0 24 24" aria-hidden="true">
+                  <path d="M5 12h14M13 6l6 6-6 6" />
+                </svg>
+              </button>
+              <button class="text-button cancel-edit" type="button" hidden>Cancelar edição</button>
+            </form>
+          </section>
+
+          <section class="activity-section only-user" id="eventos" aria-labelledby="events-title">
+            <div class="section-heading">
+              <div>
+                <p class="section-number">02 · EVENTOS</p>
+                <h2 id="events-title">Próximos eventos</h2>
+              </div>
+              <span class="count-badge" id="events-count">0</span>
+            </div>
+
+            <div class="filter-chips" id="type-filter" role="group" aria-label="Filtrar por tipo"></div>
+
+            <div class="table-card">
+              <ul class="entry-list" id="events-list"></ul>
+              <div class="empty-state" id="events-empty" hidden>
+                <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+                <div>
+                  <strong>Nenhum evento por vir</strong>
+                  <p>Laboratórios, workshops e vagas publicados pelos líderes aparecerão aqui.</p>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section
+            class="activity-section history-section only-lider"
+            id="lixeira-eventos"
+            aria-labelledby="event-trash-title"
+          >
+            <div class="section-heading">
+              <div>
+                <p class="section-number">03 · LIXEIRA</p>
+                <h2 id="event-trash-title">Eventos apagados</h2>
+              </div>
+              <span class="count-badge count-badge-muted" id="event-trash-count">0</span>
+            </div>
+
+            <div class="table-card history-card trash-card">
+              <ul class="entry-list" id="event-trash-list"></ul>
+              <div class="empty-state" id="event-trash-empty" hidden>
+                <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+                <div>
+                  <strong>A lixeira está vazia</strong>
+                  <p>Eventos apagados ficam aqui por 7 dias e podem ser restaurados.</p>
                 </div>
               </div>
             </div>

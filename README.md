@@ -12,7 +12,8 @@ Página única e responsiva para concentrar as atividades da Turma B. O projeto 
 - contagem regressiva com cores (atrasada, até 48h, esta semana) e filtro por disciplina;
 - líderes editam título, data e disciplina, e cadastram datas passadas;
 - exclusão suave (deletedAt) com lixeira de 7 dias, visível só para líderes;
-- abas Atividades e Avisos;
+- abas Atividades, Avisos e Eventos;
+- eventos (Laboratório, Workshop, Vaga/Oportunidade, Outro) com link opcional e filtro por tipo;
 - avisos publicados pelos líderes (origem "Líderes" ou "Professor — nome/disciplina"), com opção de fixar no topo, edição e lixeira de 7 dias;
 - sincronização em tempo real entre os dispositivos;
 - modo local automático enquanto o Firebase não estiver configurado;
@@ -98,6 +99,7 @@ A lista de disciplinas está fixa em três lugares. Ao mudar, altere os três:
 - `appOptions.classSize` (em `firebase-config.js`) é o N de "X de N concluíram". Em dev vale 2 (os dois usuários de teste); em produção deve ser o número de alunos da turma.
 - Dados da Fase 2: cada atividade tem `doneCount` e `deletedAt`; o progresso de cada pessoa fica em `/progress/{uid}` (`done: { idDaAtividade: true }`), que só o próprio usuário lê. No modo local, o progresso fica em `agenda-turma-b:DEV:progress:v1`.
 - Dados da Fase 3: coleção `notices` com `title`, `body`, `source` (`lideres` ou `professor`), `sourceDetail`, `date`, `pinned` e `deletedAt`. No modo local: `agenda-turma-b:DEV:notices:v1`.
+- Dados da Fase 4: coleção `events` com `type` (`lab`, `workshop`, `vaga`, `outro`), `title`, `description`, `date`, `link` (só http/https) e `deletedAt`. Eventos com data passada saem da lista sem serem apagados. No modo local: `agenda-turma-b:DEV:events:v1`.
 
 ## Estrutura
 

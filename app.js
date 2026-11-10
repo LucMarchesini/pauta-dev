@@ -4,10 +4,12 @@ import { DEV_MODE, getCurrentUser, login, logout } from "./auth.js";
 const FIREBASE_VERSION = "12.18.0";
 const ACTIVITIES = appOptions.collectionName;
 const NOTICES = "notices";
+const EVENTS = "events";
 const LOCAL_PREFIX = "agenda-turma-b:DEV:";
 const LOCAL_PROGRESS_KEY = `${LOCAL_PREFIX}progress:v1`;
 const SUBJECTS = new Set(["GDE", "DesSoft", "InstruMed", "DesProd", "Tópicos", "ModSim"]);
 const SOURCES = { lideres: "Líderes", professor: "Professor" };
+const TYPES = { lab: "Laboratório", workshop: "Workshop", vaga: "Vaga/Oportunidade", outro: "Outro" };
 const MONTHS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const CLASS_SIZE = appOptions.classSize;
@@ -29,22 +31,30 @@ const elements = {
   subject: document.querySelector("#activity-subject"),
   noticeForm: document.querySelector("#notice-form"),
   noticeDetailField: document.querySelector("#notice-detail-field"),
+  eventForm: document.querySelector("#event-form"),
   subjectFilter: document.querySelector("#subject-filter"),
+  typeFilter: document.querySelector("#type-filter"),
   activitiesList: document.querySelector("#activities-list"),
   historyList: document.querySelector("#history-list"),
   trashList: document.querySelector("#trash-list"),
   noticesList: document.querySelector("#notices-list"),
   noticeTrashList: document.querySelector("#notice-trash-list"),
+  eventsList: document.querySelector("#events-list"),
+  eventTrashList: document.querySelector("#event-trash-list"),
   activitiesEmpty: document.querySelector("#activities-empty"),
   historyEmpty: document.querySelector("#history-empty"),
   trashEmpty: document.querySelector("#trash-empty"),
   noticesEmpty: document.querySelector("#notices-empty"),
   noticeTrashEmpty: document.querySelector("#notice-trash-empty"),
+  eventsEmpty: document.querySelector("#events-empty"),
+  eventTrashEmpty: document.querySelector("#event-trash-empty"),
   activitiesCount: document.querySelector("#activities-count"),
   historyCount: document.querySelector("#history-count"),
   trashCount: document.querySelector("#trash-count"),
   noticesCount: document.querySelector("#notices-count"),
   noticeTrashCount: document.querySelector("#notice-trash-count"),
+  eventsCount: document.querySelector("#events-count"),
+  eventTrashCount: document.querySelector("#event-trash-count"),
   setupBanner: document.querySelector("#setup-banner"),
   setupTitle: document.querySelector("#setup-title"),
   setupMessage: document.querySelector("#setup-message"),
@@ -87,6 +97,7 @@ const collections = {
     isValid: isValidNotice,
     read: readNotice,
     sync: syncNoticeForm,
+    describe: describeNotice,
     texts: {
       added: "Aviso publicado.",
       trashed: "Aviso movido para a lixeira.",
@@ -95,14 +106,30 @@ const collections = {
       trashNote: "Ele fica na lixeira por 7 dias e pode ser restaurado.",
     },
   },
+  [EVENTS]: {
+    name: EVENTS,
+    form: elements.eventForm,
+    headings: ["Novo evento", "Editar evento"],
+    addLabels: ["Publicando…", "Publicar evento"],
+    isValid: isValidEvent,
+    read: readEvent,
+    describe: describeEvent,
+    texts: {
+      added: "Evento publicado.",
+      trashed: "Evento movido para a lixeira.",
+      restored: "Evento restaurado.",
+      dialogTitle: "Apagar este evento?",
+      trashNote: "Ele fica na lixeira por 7 dias e pode ser restaurado.",
+    },
+  },
 };
 
 const state = {
-  data: { [ACTIVITIES]: [], [NOTICES]: [] },
+  data: { [ACTIVITIES]: [], [NOTICES]: [], [EVENTS]: [] },
   done: new Set(),
   user: null,
   service: null,
-  filter: "all",
+  filters: { [ACTIVITIES]: "all", [EVENTS]: "all" },
   pendingDelete: null,
   justToggled: null,
   lastCounts: new Map(),
@@ -124,7 +151,8 @@ async function start() {
     return;
   }
 
-  createFilterChips();
+  createChips(elements.subjectFilter, ACTIVITIES, "Todas", [...SUBJECTS].map((subject) => [subject, subject]));
+  createChips(elements.typeFilter, EVENTS, "Todos", Object.entries(TYPES));
   syncNoticeForm();
   if (revealTab(location.hash)) document.getElementById(location.hash.slice(1))?.scrollIntoView();
   render();
@@ -154,6 +182,7 @@ function bindEvents() {
   });
   elements.noticeForm.elements.source.addEventListener("change", syncNoticeForm);
   elements.subjectFilter.addEventListener("click", handleFilterClick);
+  elements.typeFilter.addEventListener("click", handleFilterClick);
   elements.main.addEventListener("change", handleListChange);
   elements.main.addEventListener("click", handleRowClick);
   elements.tabs.addEventListener("click", handleTabClick);
@@ -397,6 +426,27 @@ function isValidNotice(item) {
   );
 }
 
+function isValidEvent(item) {
+  return (
+    item &&
+    typeof item.id === "string" &&
+    typeof item.title === "string" &&
+    typeof item.description === "string" &&
+    Object.hasOwn(TYPES, item.type) &&
+    DATE_PATTERN.test(item.date)
+  );
+}
+
+// Só aceita links http(s); javascript:, data: e outros esquemas viram null.
+function safeUrl(value) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "http:" || url.protocol === "https:" ? url : null;
+  } catch {
+    return null;
+  }
+}
+
 function handleItems(config, items) {
   state.data[config.name] = items.filter(config.isValid);
   scheduleRender();
@@ -458,6 +508,29 @@ function readNotice() {
     return null;
   }
   return notice;
+}
+
+function readEvent() {
+  const fields = elements.eventForm.elements;
+  const link = fields.link.value.trim();
+  const url = link ? safeUrl(link) : null;
+  const event = {
+    type: fields.type.value,
+    title: normalizeText(fields.title.value),
+    description: fields.description.value.trim(),
+    date: fields.date.value,
+    link: url ? url.href : "",
+  };
+  if (event.title.length < 3 || !event.description || !Object.hasOwn(TYPES, event.type)) {
+    showToast("Revise o tipo, o título e a descrição do evento.");
+    return null;
+  }
+  if (link && !url) {
+    showToast("O link precisa começar com http:// ou https://.");
+    fields.link.focus();
+    return null;
+  }
+  return event;
 }
 
 // Mostra "Professor e disciplina" só quando a origem é Professor; data padrão = hoje.
@@ -605,7 +678,7 @@ async function restoreItem(config, item) {
 // Espera a animação de saída da linha (com movimento reduzido não há animação e segue direto).
 async function animateOut(id) {
   const selector = CSS.escape(id);
-  const row = document.querySelector(`.activity-row[data-id="${selector}"], .notice[data-id="${selector}"]`);
+  const row = document.querySelector(`.activity-row[data-id="${selector}"], .entry[data-id="${selector}"]`);
   if (!row) return;
   row.classList.add("is-leaving");
   await Promise.allSettled(row.getAnimations().map((animation) => animation.finished));
@@ -651,24 +724,27 @@ function revealTab(hash) {
 
 // ---------- Filtro ----------
 
-function createFilterChips() {
-  const chips = ["all", ...SUBJECTS].map((subject) => {
+// options: [[valor, rótulo], ...]. O grupo guarda a coleção que ele filtra.
+function createChips(group, collection, allLabel, options) {
+  group.dataset.collection = collection;
+  const chips = [["all", allLabel], ...options].map(([value, label]) => {
     const chip = document.createElement("button");
     chip.type = "button";
     chip.className = "chip";
-    chip.dataset.subject = subject;
-    chip.textContent = subject === "all" ? "Todas" : subject;
-    chip.setAttribute("aria-pressed", String(subject === state.filter));
+    chip.dataset.value = value;
+    chip.textContent = label;
+    chip.setAttribute("aria-pressed", String(value === state.filters[collection]));
     return chip;
   });
-  elements.subjectFilter.replaceChildren(...chips);
+  group.replaceChildren(...chips);
 }
 
 function handleFilterClick(event) {
-  const chip = event.target.closest("button[data-subject]");
+  const chip = event.target.closest("button[data-value]");
   if (!chip) return;
-  state.filter = chip.dataset.subject;
-  elements.subjectFilter.querySelectorAll(".chip").forEach((item) => {
+  const group = chip.parentElement;
+  state.filters[group.dataset.collection] = chip.dataset.value;
+  group.querySelectorAll(".chip").forEach((item) => {
     item.setAttribute("aria-pressed", String(item === chip));
   });
   render();
@@ -679,6 +755,7 @@ function handleFilterClick(event) {
 function render() {
   renderActivities();
   renderNotices();
+  renderEvents();
   state.justToggled = null;
   state.lastCounts = new Map(state.data[ACTIVITIES].map((item) => [item.id, doneCountOf(item)]));
 }
@@ -686,7 +763,8 @@ function render() {
 function renderActivities() {
   const today = toDateInputValue(new Date());
   const items = state.data[ACTIVITIES];
-  const inFilter = (item) => state.filter === "all" || item.subject === state.filter;
+  const filter = state.filters[ACTIVITIES];
+  const inFilter = (item) => filter === "all" || item.subject === filter;
   const active = items.filter((item) => !item.deletedAt && inFilter(item));
   const upcoming = active.filter((item) => item.dueDate >= today).sort((a, b) => compareDates(a, b, 1));
   const history = active.filter((item) => item.dueDate < today).sort((a, b) => compareDates(a, b, -1));
@@ -706,11 +784,28 @@ function renderNotices() {
   const active = items.filter((item) => !item.deletedAt).sort(compareNotices);
   const trash = items.filter(isInTrash).sort(byDeletedAt);
 
-  renderNoticeList(elements.noticesList, active, false);
-  renderNoticeList(elements.noticeTrashList, isLeader() ? trash : [], true);
+  renderEntryList(elements.noticesList, active, NOTICES, false);
+  renderEntryList(elements.noticeTrashList, isLeader() ? trash : [], NOTICES, true);
 
   setCount(elements.noticesCount, elements.noticesEmpty, active.length, "aviso", "avisos");
   setCount(elements.noticeTrashCount, elements.noticeTrashEmpty, trash.length, "aviso na lixeira", "avisos na lixeira");
+}
+
+// Eventos com data passada saem da lista sozinhos (não são apagados).
+function renderEvents() {
+  const today = toDateInputValue(new Date());
+  const items = state.data[EVENTS];
+  const filter = state.filters[EVENTS];
+  const upcoming = items
+    .filter((item) => !item.deletedAt && item.date >= today && (filter === "all" || item.type === filter))
+    .sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title, "pt-BR"));
+  const trash = items.filter(isInTrash).sort(byDeletedAt);
+
+  renderEntryList(elements.eventsList, upcoming, EVENTS, false);
+  renderEntryList(elements.eventTrashList, isLeader() ? trash : [], EVENTS, true);
+
+  setCount(elements.eventsCount, elements.eventsEmpty, upcoming.length, "evento", "eventos");
+  setCount(elements.eventTrashCount, elements.eventTrashEmpty, trash.length, "evento na lixeira", "eventos na lixeira");
 }
 
 function setCount(badge, empty, total, singular, plural) {
@@ -771,15 +866,20 @@ function renderActivityList(list, items, kind) {
   list.replaceChildren(fragment);
 }
 
-function renderNoticeList(list, items, inTrash) {
+// Cartões de avisos e eventos: data, conteúdo (descrito pela coleção) e ações.
+function renderEntryList(list, items, collection, inTrash) {
   const before = previousIds(list);
-  const cards = items.map((notice) => {
+  const cards = items.map((item) => {
     const card = document.createElement("li");
-    card.className = "notice";
-    card.dataset.id = notice.id;
-    card.classList.toggle("is-pinned", Boolean(notice.pinned) && !inTrash);
-    card.classList.toggle("is-new", before.size > 0 && !before.has(notice.id));
-    card.append(createDateBlock(notice.date), createNoticeCopy(notice, inTrash), createRowActions(notice, NOTICES, inTrash));
+    card.className = "entry";
+    card.dataset.id = item.id;
+    card.classList.toggle("is-pinned", Boolean(item.pinned) && !inTrash);
+    card.classList.toggle("is-new", before.size > 0 && !before.has(item.id));
+    card.append(
+      createDateBlock(item.date),
+      createEntryCopy(item, collections[collection].describe(item), inTrash),
+      createRowActions(item, collection, inTrash),
+    );
     return card;
   });
   list.replaceChildren(...cards);
@@ -860,37 +960,56 @@ function createActivityCopy(activity, kind) {
   return copy;
 }
 
-function createNoticeCopy(notice, inTrash) {
+// description: { meta: [Node], body: string, link?: Node }. Todo texto entra por textContent.
+function createEntryCopy(item, description, inTrash) {
   const copy = document.createElement("div");
-  copy.className = "notice-copy";
+  copy.className = "entry-copy";
 
   const meta = document.createElement("p");
-  meta.className = "notice-meta";
-  if (inTrash) {
-    meta.textContent = `Pode ser restaurado até ${formatRestoreDate(notice)}`;
-  } else {
-    const source = document.createElement("span");
-    source.textContent =
-      notice.source === "professor" ? `Professor — ${notice.sourceDetail}` : SOURCES.lideres;
-    meta.append(source);
-    if (notice.pinned) {
-      const pin = document.createElement("span");
-      pin.className = "pin-label";
-      pin.textContent = "Fixado";
-      meta.prepend(pin);
-    }
-  }
+  meta.className = "entry-meta";
+  if (inTrash) meta.textContent = `Pode ser restaurado até ${formatRestoreDate(item)}`;
+  else meta.append(...description.meta);
 
   const title = document.createElement("h3");
-  title.className = "notice-title";
-  title.textContent = notice.title;
+  title.className = "entry-title";
+  title.textContent = item.title;
 
   const body = document.createElement("p");
-  body.className = "notice-body";
-  body.textContent = notice.body;
+  body.className = "entry-body";
+  body.textContent = description.body;
 
   copy.append(meta, title, body);
+  if (description.link && !inTrash) copy.append(description.link);
   return copy;
+}
+
+function describeNotice(notice) {
+  const source = createText(
+    "span",
+    notice.source === "professor" ? `Professor — ${notice.sourceDetail}` : SOURCES.lideres,
+  );
+  const meta = notice.pinned ? [createText("span", "Fixado", "pin-label"), source] : [source];
+  return { meta, body: notice.body };
+}
+
+function describeEvent(event) {
+  const url = event.link ? safeUrl(event.link) : null;
+  let link = null;
+  if (url) {
+    link = createText("a", `Abrir em ${url.hostname}`, "entry-link");
+    link.href = url.href;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.setAttribute("aria-label", `Abrir em ${url.hostname} (nova aba)`);
+  }
+  return { meta: [createText("span", TYPES[event.type], "type-label")], body: event.description, link };
+}
+
+function createText(tag, text, className) {
+  const element = document.createElement(tag);
+  element.textContent = text;
+  if (className) element.className = className;
+  return element;
 }
 
 // Contagem regressiva. Tons: late (atrasada), soon (até 48h), week (esta semana).
