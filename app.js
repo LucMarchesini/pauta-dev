@@ -1,7 +1,7 @@
 import { appOptions, firebaseConfig } from "./firebase-config.js";
 
 const FIREBASE_VERSION = "12.18.0";
-const LOCAL_STORAGE_KEY = "agenda-turma-b:activities:v1";
+const LOCAL_STORAGE_KEY = "agenda-turma-b:DEV:activities:v1";
 const SUBJECTS = new Set(["GDE", "DesSoft", "InstruMed", "DesProd", "Tópicos", "ModSim"]);
 const MONTHS = ["JAN", "FEV", "MAR", "ABR", "MAI", "JUN", "JUL", "AGO", "SET", "OUT", "NOV", "DEZ"];
 
@@ -74,7 +74,8 @@ function hasFirebaseConfig() {
   });
 }
 
-function useLocalMode(message) {
+async function useLocalMode(message) {
+  await seedLocalItems();
   state.service = createLocalService();
   setConnection("offline", "Modo local");
   elements.setupBanner.hidden = false;
@@ -188,6 +189,23 @@ function createLocalService() {
     },
   };
 }
+
+// Dev: popula o localStorage com o snapshot estático na primeira execução.
+// Para voltar ao snapshot original, rode no console: resetDevData()
+async function seedLocalItems() {
+  if (localStorage.getItem(LOCAL_STORAGE_KEY) !== null || !appOptions.seedUrl) return;
+  try {
+    const response = await fetch(appOptions.seedUrl, { cache: "no-store" });
+    if (response.ok) localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(await response.json()));
+  } catch (error) {
+    console.warn("Sem snapshot de dev:", error);
+  }
+}
+
+window.resetDevData = () => {
+  localStorage.removeItem(LOCAL_STORAGE_KEY);
+  location.reload();
+};
 
 function readLocalItems() {
   try {
