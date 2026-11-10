@@ -13,6 +13,8 @@ export const firebaseConfig = Object.freeze({
 
 export const appOptions = Object.freeze({
   collectionName: "activities",
+  // Número de alunos da turma, usado em "X de N concluíram". Em dev: os 2 usuários de teste.
+  classSize: 2,
   // Usado só no modo local: dados iniciais quando o localStorage está vazio.
   seedUrl: "dev-data/seed.json",
 });

@@ -1,6 +1,13 @@
 // PROPOSTA — NÃO FAZER DEPLOY. Revisar antes de substituir firestore.rules.
 // Fase 1: base de autenticação e papéis. As fases seguintes completam este arquivo.
 //
+// TODO (Fase 5): progresso individual ("eu já fiz").
+// - O app grava /progress/{uid} e o doneCount da atividade juntos, numa única operação
+//   atômica (writeBatch em createFirebaseService.setDone). Nunca um sem o outro.
+// - As regras devem validar que o doneCount muda exatamente +1 ou -1, e só quando o
+//   mesmo batch adiciona/remove aquela atividade no /progress/{uid} do próprio usuário
+//   (comparar get() e getAfter() do documento de progresso).
+//
 // Como o papel de líder é validado no backend:
 // - O login real (Firebase Auth com conta Google do Insper) entrega request.auth
 //   com o e-mail verificado do usuário.

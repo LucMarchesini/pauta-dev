@@ -6,10 +6,12 @@ Página única e responsiva para concentrar as atividades da Turma B. O projeto 
 
 - inserção de data, título e disciplina;
 - disciplinas limitadas a GDE, DesSoft, InstruMed, DesProd, Tópicos e ModSim;
-- atividades pendentes em ordem crescente de data;
-- histórico em ordem decrescente de data;
-- conclusão e reabertura por checkbox;
-- exclusão definitiva apenas pelo histórico e após confirmação;
+- atividades pendentes em ordem crescente de data, agrupadas por semana;
+- histórico (data de entrega vencida) em ordem decrescente de data;
+- "eu já fiz" individual por usuário, com "X de N concluíram" e o selo "Turma toda concluiu";
+- contagem regressiva com cores (atrasada, até 48h, esta semana) e filtro por disciplina;
+- líderes editam título, data e disciplina, e cadastram datas passadas;
+- exclusão suave (deletedAt) com lixeira de 7 dias, visível só para líderes;
 - sincronização em tempo real entre os dispositivos;
 - modo local automático enquanto o Firebase não estiver configurado;
 - layout adaptado para computador, tablet e celular;
@@ -91,6 +93,8 @@ A lista de disciplinas está fixa em três lugares. Ao mudar, altere os três:
 - O modo local carrega `dev-data/seed.json` (snapshot real, fora do git). Rode `resetDevData()` no console para voltar a ele.
 - `auth.js` é a camada de login. Hoje é um mock com os usuários `lider@al.insper.edu.br` e `aluno@al.insper.edu.br`; o login real substitui só o corpo das funções desse arquivo.
 - `firestore.rules.proposta` contém as regras novas para revisão, ainda sem deploy.
+- `appOptions.classSize` (em `firebase-config.js`) é o N de "X de N concluíram". Em dev vale 2 (os dois usuários de teste); em produção deve ser o número de alunos da turma.
+- Dados da Fase 2: cada atividade tem `doneCount` e `deletedAt`; o progresso de cada pessoa fica em `/progress/{uid}` (`done: { idDaAtividade: true }`), que só o próprio usuário lê. No modo local, o progresso fica em `agenda-turma-b:DEV:progress:v1`.
 
 ## Estrutura
 

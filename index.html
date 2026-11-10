@@ -39,6 +39,7 @@
         <nav class="main-nav only-user" aria-label="Navegação principal">
           <a href="#atividades">Atividades</a>
           <a href="#historico">Histórico</a>
+          <a class="only-lider" href="#lixeira">Lixeira</a>
           <a class="nav-primary only-lider" href="#inserir">+ Inserir</a>
           <span class="user-name" id="user-name"></span>
           <button class="logout-button" id="logout-button" type="button">Sair</button>
@@ -53,7 +54,7 @@
             <p class="eyebrow"><span></span> Turma B · Agenda coletiva</p>
             <h1 id="hero-title">Tudo o que a turma precisa entregar.</h1>
             <p class="hero-description">
-              Uma visão única das próximas atividades e de tudo o que já foi concluído.
+              Uma visão única das próximas atividades e de tudo o que já passou.
             </p>
           </div>
 
@@ -160,6 +161,9 @@
                 <path d="M5 12h14M13 6l6 6-6 6" />
               </svg>
             </button>
+            <button class="text-button cancel-edit" id="cancel-edit" type="button" hidden>
+              Cancelar edição
+            </button>
           </form>
         </section>
 
@@ -172,20 +176,22 @@
             <span class="count-badge" id="activities-count" aria-live="polite">0</span>
           </div>
 
+          <div class="filter-chips" id="subject-filter" role="group" aria-label="Filtrar por disciplina"></div>
+
           <div class="table-card">
             <div class="table-header" aria-hidden="true">
-              <span>Status</span>
+              <span>Eu fiz</span>
               <span>Data</span>
               <span>Atividade</span>
               <span>Disciplina</span>
               <span></span>
             </div>
-            <ul class="activity-list" id="activities-list" aria-live="polite"></ul>
+            <ul class="activity-list" id="activities-list"></ul>
             <div class="empty-state" id="activities-empty" hidden>
               <span class="empty-icon" aria-hidden="true">✓</span>
               <div>
                 <strong>Nenhuma atividade pendente</strong>
-                <p>Quando alguém inserir uma nova entrega, ela aparecerá aqui.</p>
+                <p>Quando um líder inserir uma nova entrega, ela aparecerá aqui.</p>
               </div>
             </div>
           </div>
@@ -199,7 +205,7 @@
           <div class="section-heading">
             <div>
               <p class="section-number">03 · HISTÓRICO</p>
-              <h2 id="history-title">Atividades concluídas</h2>
+              <h2 id="history-title">Entregas passadas</h2>
             </div>
             <span class="count-badge count-badge-muted" id="history-count" aria-live="polite"
               >0</span
@@ -208,18 +214,43 @@
 
           <div class="table-card history-card">
             <div class="table-header" aria-hidden="true">
-              <span>Status</span>
+              <span>Eu fiz</span>
               <span>Data</span>
               <span>Atividade</span>
               <span>Disciplina</span>
-              <span>Ação</span>
+              <span></span>
             </div>
-            <ul class="activity-list" id="history-list" aria-live="polite"></ul>
+            <ul class="activity-list" id="history-list"></ul>
             <div class="empty-state" id="history-empty" hidden>
               <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
               <div>
                 <strong>O histórico ainda está vazio</strong>
-                <p>As atividades marcadas como concluídas ficarão guardadas aqui.</p>
+                <p>As atividades com a data de entrega vencida ficam guardadas aqui.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section
+          class="activity-section history-section only-lider"
+          id="lixeira"
+          aria-labelledby="trash-title"
+        >
+          <div class="section-heading">
+            <div>
+              <p class="section-number">04 · LIXEIRA</p>
+              <h2 id="trash-title">Apagadas recentemente</h2>
+            </div>
+            <span class="count-badge count-badge-muted" id="trash-count" aria-live="polite">0</span>
+          </div>
+
+          <div class="table-card history-card trash-card">
+            <ul class="activity-list" id="trash-list"></ul>
+            <div class="empty-state" id="trash-empty" hidden>
+              <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+              <div>
+                <strong>A lixeira está vazia</strong>
+                <p>Atividades apagadas ficam aqui por 7 dias e podem ser restauradas.</p>
               </div>
             </div>
           </div>
@@ -247,15 +278,15 @@
             <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
           </svg>
         </div>
-        <p class="section-number">EXCLUSÃO DEFINITIVA</p>
+        <p class="section-number">LIXEIRA</p>
         <h2 id="dialog-title">Apagar esta atividade?</h2>
         <p id="dialog-description">
-          Ela será removida do histórico para todos e não poderá ser recuperada.
+          Ela sai da agenda de todos e fica na lixeira por 7 dias.
         </p>
         <div class="dialog-actions">
           <button class="button-secondary" value="cancel">Cancelar</button>
           <button class="button-danger" id="confirm-delete" value="confirm">
-            Apagar definitivamente
+            Mover para a lixeira
           </button>
         </div>
       </form>
