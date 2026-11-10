@@ -25,36 +25,12 @@ const ICONS = {
 const elements = {
   main: document.querySelector("main"),
   tabs: document.querySelector("#tabs"),
-  form: document.querySelector("#activity-form"),
-  date: document.querySelector("#activity-date"),
-  title: document.querySelector("#activity-title"),
-  subject: document.querySelector("#activity-subject"),
+  activityForm: document.querySelector("#activity-form"),
   noticeForm: document.querySelector("#notice-form"),
   noticeDetailField: document.querySelector("#notice-detail-field"),
   eventForm: document.querySelector("#event-form"),
   subjectFilter: document.querySelector("#subject-filter"),
   typeFilter: document.querySelector("#type-filter"),
-  activitiesList: document.querySelector("#activities-list"),
-  historyList: document.querySelector("#history-list"),
-  trashList: document.querySelector("#trash-list"),
-  noticesList: document.querySelector("#notices-list"),
-  noticeTrashList: document.querySelector("#notice-trash-list"),
-  eventsList: document.querySelector("#events-list"),
-  eventTrashList: document.querySelector("#event-trash-list"),
-  activitiesEmpty: document.querySelector("#activities-empty"),
-  historyEmpty: document.querySelector("#history-empty"),
-  trashEmpty: document.querySelector("#trash-empty"),
-  noticesEmpty: document.querySelector("#notices-empty"),
-  noticeTrashEmpty: document.querySelector("#notice-trash-empty"),
-  eventsEmpty: document.querySelector("#events-empty"),
-  eventTrashEmpty: document.querySelector("#event-trash-empty"),
-  activitiesCount: document.querySelector("#activities-count"),
-  historyCount: document.querySelector("#history-count"),
-  trashCount: document.querySelector("#trash-count"),
-  noticesCount: document.querySelector("#notices-count"),
-  noticeTrashCount: document.querySelector("#notice-trash-count"),
-  eventsCount: document.querySelector("#events-count"),
-  eventTrashCount: document.querySelector("#event-trash-count"),
   setupBanner: document.querySelector("#setup-banner"),
   setupTitle: document.querySelector("#setup-title"),
   setupMessage: document.querySelector("#setup-message"),
@@ -74,11 +50,23 @@ const elements = {
   noAccessLogout: document.querySelector("#no-access-logout"),
 };
 
+// Cada lista tem no HTML os ids #<chave>-list, #<chave>-empty e #<chave>-count.
+const lists = Object.fromEntries(
+  ["activities", "history", "trash", "notices", "notice-trash", "events", "event-trash"].map((key) => [
+    key,
+    {
+      list: document.querySelector(`#${key}-list`),
+      empty: document.querySelector(`#${key}-empty`),
+      count: document.querySelector(`#${key}-count`),
+    },
+  ]),
+);
+
 // Tudo o que muda entre coleções: formulário, validação e textos.
 const collections = {
   [ACTIVITIES]: {
     name: ACTIVITIES,
-    form: elements.form,
+    form: elements.activityForm,
     headings: ["Nova atividade", "Editar atividade"],
     addLabels: ["Adicionando…", "Adicionar atividade"],
     isValid: isValidActivity,
@@ -277,14 +265,8 @@ async function createFirebaseService(user) {
       const source = firestore.collection(db, name);
       firestore.onSnapshot(
         user.role === "lider" ? source : firestore.query(source, firestore.where("deletedAt", "==", null)),
-        (snapshot) => {
-          onItems(
-            snapshot.docs.map((item) => ({
-              id: item.id,
-              ...item.data({ serverTimestamps: "estimate" }),
-            })),
-          );
-        },
+        (snapshot) =>
+          onItems(snapshot.docs.map((item) => ({ id: item.id, ...item.data({ serverTimestamps: "estimate" }) }))),
         onError,
       );
     },
@@ -410,36 +392,23 @@ function readLocal(key, fallback) {
   }
 }
 
-function isValidActivity(item) {
+// Base comum: id e título em texto e data AAAA-MM-DD no campo indicado.
+function isItem(item, dateField) {
   return (
-    item &&
-    typeof item.id === "string" &&
-    typeof item.title === "string" &&
-    SUBJECTS.has(item.subject) &&
-    DATE_PATTERN.test(item.dueDate)
+    Boolean(item) && typeof item.id === "string" && typeof item.title === "string" && DATE_PATTERN.test(item[dateField])
   );
+}
+
+function isValidActivity(item) {
+  return isItem(item, "dueDate") && SUBJECTS.has(item.subject);
 }
 
 function isValidNotice(item) {
-  return (
-    item &&
-    typeof item.id === "string" &&
-    typeof item.title === "string" &&
-    typeof item.body === "string" &&
-    Object.hasOwn(SOURCES, item.source) &&
-    DATE_PATTERN.test(item.date)
-  );
+  return isItem(item, "date") && typeof item.body === "string" && Object.hasOwn(SOURCES, item.source);
 }
 
 function isValidEvent(item) {
-  return (
-    item &&
-    typeof item.id === "string" &&
-    typeof item.title === "string" &&
-    typeof item.description === "string" &&
-    Object.hasOwn(TYPES, item.type) &&
-    DATE_PATTERN.test(item.date)
-  );
+  return isItem(item, "date") && typeof item.description === "string" && Object.hasOwn(TYPES, item.type);
 }
 
 // Só aceita links http(s); javascript:, data: e outros esquemas viram null.
@@ -485,10 +454,11 @@ function handleRemoteError(error) {
 // ---------- Formulários (criar e editar) ----------
 
 function readActivity() {
+  const fields = elements.activityForm.elements;
   const activity = {
-    dueDate: elements.date.value,
-    title: normalizeText(elements.title.value),
-    subject: elements.subject.value,
+    dueDate: fields.dueDate.value,
+    title: normalizeText(fields.title.value),
+    subject: fields.subject.value,
   };
   if (activity.title.length < 3 || !SUBJECTS.has(activity.subject)) {
     showToast("Revise o título e a disciplina da atividade.");
@@ -544,7 +514,7 @@ function syncNoticeForm() {
   const fromProfessor = fields.source.value === "professor";
   elements.noticeDetailField.hidden = !fromProfessor;
   fields.sourceDetail.required = fromProfessor;
-  if (!fields.date.value) fields.date.value = toDateInputValue(new Date());
+  if (!fields.date.value) fields.date.value = todayValue();
 }
 
 async function handleSubmit(event, config) {
@@ -766,57 +736,59 @@ function render() {
 }
 
 function renderActivities() {
-  const today = toDateInputValue(new Date());
-  const items = state.data[ACTIVITIES];
+  const today = todayValue();
   const filter = state.filters[ACTIVITIES];
-  const inFilter = (item) => filter === "all" || item.subject === filter;
-  const active = items.filter((item) => !item.deletedAt && inFilter(item));
-  const upcoming = active.filter((item) => item.dueDate >= today).sort((a, b) => compareDates(a, b, 1));
-  const history = active.filter((item) => item.dueDate < today).sort((a, b) => compareDates(a, b, -1));
-  const trash = items.filter(isInTrash).sort(byDeletedAt);
+  const active = state.data[ACTIVITIES].filter((item) => !item.deletedAt && (filter === "all" || item.subject === filter));
+  const upcoming = active.filter((item) => item.dueDate >= today).sort(byDate("dueDate", 1));
+  const history = active.filter((item) => item.dueDate < today).sort(byDate("dueDate", -1));
+  const trash = trashOf(ACTIVITIES);
 
-  renderActivityList(elements.activitiesList, upcoming, "upcoming");
-  renderActivityList(elements.historyList, history, "history");
-  renderActivityList(elements.trashList, isLeader() ? trash : [], "trash");
+  renderActivityList("activities", upcoming, "upcoming");
+  renderActivityList("history", history, "history");
+  renderActivityList("trash", trash, "trash");
 
-  setCount(elements.activitiesCount, elements.activitiesEmpty, upcoming.length, "atividade pendente", "atividades pendentes");
-  setCount(elements.historyCount, elements.historyEmpty, history.length, "atividade passada", "atividades passadas");
-  setCount(elements.trashCount, elements.trashEmpty, trash.length, "atividade na lixeira", "atividades na lixeira");
+  setCount("activities", upcoming.length, "atividade pendente", "atividades pendentes");
+  setCount("history", history.length, "atividade passada", "atividades passadas");
+  setCount("trash", trash.length, "atividade na lixeira", "atividades na lixeira");
 }
 
 function renderNotices() {
-  const items = state.data[NOTICES];
-  const active = items.filter((item) => !item.deletedAt).sort(compareNotices);
-  const trash = items.filter(isInTrash).sort(byDeletedAt);
+  const active = state.data[NOTICES].filter((item) => !item.deletedAt).sort(compareNotices);
+  const trash = trashOf(NOTICES);
 
-  renderEntryList(elements.noticesList, active, NOTICES, false);
-  renderEntryList(elements.noticeTrashList, isLeader() ? trash : [], NOTICES, true);
+  renderEntryList("notices", active, NOTICES, false);
+  renderEntryList("notice-trash", trash, NOTICES, true);
 
-  setCount(elements.noticesCount, elements.noticesEmpty, active.length, "aviso", "avisos");
-  setCount(elements.noticeTrashCount, elements.noticeTrashEmpty, trash.length, "aviso na lixeira", "avisos na lixeira");
+  setCount("notices", active.length, "aviso", "avisos");
+  setCount("notice-trash", trash.length, "aviso na lixeira", "avisos na lixeira");
 }
 
 // Eventos com data passada saem da lista sozinhos (não são apagados).
 function renderEvents() {
-  const today = toDateInputValue(new Date());
-  const items = state.data[EVENTS];
+  const today = todayValue();
   const filter = state.filters[EVENTS];
-  const upcoming = items
+  const upcoming = state.data[EVENTS]
     .filter((item) => !item.deletedAt && item.date >= today && (filter === "all" || item.type === filter))
-    .sort((a, b) => a.date.localeCompare(b.date) || a.title.localeCompare(b.title, "pt-BR"));
-  const trash = items.filter(isInTrash).sort(byDeletedAt);
+    .sort(byDate("date", 1));
+  const trash = trashOf(EVENTS);
 
-  renderEntryList(elements.eventsList, upcoming, EVENTS, false);
-  renderEntryList(elements.eventTrashList, isLeader() ? trash : [], EVENTS, true);
+  renderEntryList("events", upcoming, EVENTS, false);
+  renderEntryList("event-trash", trash, EVENTS, true);
 
-  setCount(elements.eventsCount, elements.eventsEmpty, upcoming.length, "evento", "eventos");
-  setCount(elements.eventTrashCount, elements.eventTrashEmpty, trash.length, "evento na lixeira", "eventos na lixeira");
+  setCount("events", upcoming.length, "evento", "eventos");
+  setCount("event-trash", trash.length, "evento na lixeira", "eventos na lixeira");
 }
 
-function setCount(badge, empty, total, singular, plural) {
-  badge.textContent = String(total);
-  badge.setAttribute("aria-label", `${total} ${total === 1 ? singular : plural}`);
+function setCount(key, total, singular, plural) {
+  const { count, empty } = lists[key];
+  count.textContent = String(total);
+  count.setAttribute("aria-label", `${total} ${total === 1 ? singular : plural}`);
   empty.hidden = total !== 0;
+}
+
+// Lixeira (últimos 7 dias), mais recentes primeiro. Só líderes a veem.
+function trashOf(name) {
+  return isLeader() ? state.data[name].filter(isInTrash).sort(byDeletedAt) : [];
 }
 
 function isInTrash(item) {
@@ -841,7 +813,8 @@ function previousIds(list) {
   return new Set([...list.children].map((child) => child.dataset.id));
 }
 
-function renderActivityList(list, items, kind) {
+function renderActivityList(key, items, kind) {
+  const { list } = lists[key];
   const before = previousIds(list);
   const fragment = document.createDocumentFragment();
   let group = null;
@@ -849,7 +822,7 @@ function renderActivityList(list, items, kind) {
   items.forEach((activity) => {
     if (kind === "upcoming" && weekLabel(activity.dueDate) !== group) {
       group = weekLabel(activity.dueDate);
-      fragment.append(createGroupLabel(group));
+      fragment.append(createText("li", group, "week-group"));
     }
 
     const row = document.createElement("li");
@@ -862,7 +835,7 @@ function renderActivityList(list, items, kind) {
       kind === "trash" ? createSpacer("task-check") : createCheckbox(activity),
       createDateBlock(activity.dueDate),
       createActivityCopy(activity, kind),
-      createSubjectBadge(activity.subject),
+      createText("span", activity.subject, "subject-badge"),
       createRowActions(activity, ACTIVITIES, kind === "trash"),
     );
     fragment.append(row);
@@ -872,7 +845,8 @@ function renderActivityList(list, items, kind) {
 }
 
 // Cartões de avisos e eventos: data, conteúdo (descrito pela coleção) e ações.
-function renderEntryList(list, items, collection, inTrash) {
+function renderEntryList(key, items, collection, inTrash) {
+  const { list } = lists[key];
   const before = previousIds(list);
   const cards = items.map((item) => {
     const card = document.createElement("li");
@@ -888,13 +862,6 @@ function renderEntryList(list, items, collection, inTrash) {
     return card;
   });
   list.replaceChildren(...cards);
-}
-
-function createGroupLabel(text) {
-  const label = document.createElement("li");
-  label.className = "week-group";
-  label.textContent = text;
-  return label;
 }
 
 function createCheckbox(activity) {
@@ -927,32 +894,17 @@ function createDateBlock(date) {
   const time = document.createElement("time");
   time.className = "date-block";
   time.dateTime = date;
-
-  const dayElement = document.createElement("span");
-  dayElement.className = "date-day";
-  dayElement.textContent = day;
-
-  const monthElement = document.createElement("span");
-  monthElement.className = "date-month";
-  monthElement.textContent = MONTHS[Number(month) - 1];
-
   time.setAttribute("aria-label", formatLongDate(date));
-  time.append(dayElement, monthElement);
+  time.append(createText("span", day, "date-day"), createText("span", MONTHS[Number(month) - 1], "date-month"));
   time.dataset.year = year;
   return time;
 }
 
 function createActivityCopy(activity, kind) {
-  const copy = document.createElement("div");
-  copy.className = "activity-copy";
-
-  const title = document.createElement("p");
-  title.className = "activity-title";
-  title.textContent = activity.title;
+  const copy = createText("div", "", "activity-copy");
+  const title = createText("p", activity.title, "activity-title");
   title.title = activity.title;
-
-  const meta = document.createElement("p");
-  meta.className = "activity-meta";
+  const meta = createText("p", "", "activity-meta");
   copy.append(title, meta);
 
   if (kind === "trash") {
@@ -967,23 +919,12 @@ function createActivityCopy(activity, kind) {
 
 // description: { meta: [Node], body: string, link?: Node }. Todo texto entra por textContent.
 function createEntryCopy(item, description, inTrash) {
-  const copy = document.createElement("div");
-  copy.className = "entry-copy";
-
-  const meta = document.createElement("p");
-  meta.className = "entry-meta";
+  const copy = createText("div", "", "entry-copy");
+  const meta = createText("p", "", "entry-meta");
   if (inTrash) meta.textContent = `Pode ser restaurado até ${formatRestoreDate(item)}`;
   else meta.append(...description.meta);
 
-  const title = document.createElement("h3");
-  title.className = "entry-title";
-  title.textContent = item.title;
-
-  const body = document.createElement("p");
-  body.className = "entry-body";
-  body.textContent = description.body;
-
-  copy.append(meta, title, body);
+  copy.append(meta, createText("h3", item.title, "entry-title"), createText("p", description.body, "entry-body"));
   if (description.link && !inTrash) copy.append(description.link);
   return copy;
 }
@@ -1019,8 +960,7 @@ function createText(tag, text, className) {
 
 // Contagem regressiva. Tons: late (atrasada), soon (até 48h), week (esta semana).
 function createDue(activity) {
-  const due = document.createElement("span");
-  due.className = "due";
+  const due = createText("span", "", "due");
   const days = daysUntil(activity.dueDate);
   const done = state.done.has(activity.id);
 
@@ -1045,9 +985,11 @@ function createDue(activity) {
 
 function createProgressText(activity) {
   const count = doneCountOf(activity);
-  const text = document.createElement("span");
-  text.className = "progress-count";
-  text.textContent = count >= CLASS_SIZE ? "Turma toda concluiu" : `${count} de ${CLASS_SIZE} concluíram`;
+  const text = createText(
+    "span",
+    count >= CLASS_SIZE ? "Turma toda concluiu" : `${count} de ${CLASS_SIZE} concluíram`,
+    "progress-count",
+  );
   text.classList.toggle("is-complete", count >= CLASS_SIZE);
   text.classList.toggle("is-changing", countChanged(activity));
   return text;
@@ -1077,13 +1019,6 @@ function doneCountOf(activity) {
 function countChanged(activity) {
   const previous = state.lastCounts.get(activity.id);
   return previous !== undefined && previous !== doneCountOf(activity);
-}
-
-function createSubjectBadge(subject) {
-  const badge = document.createElement("span");
-  badge.className = "subject-badge";
-  badge.textContent = subject;
-  return badge;
 }
 
 function createRowActions(item, collection, inTrash) {
@@ -1121,10 +1056,9 @@ function createSpacer(className) {
 
 // ---------- Utilitários de data e texto ----------
 
-function compareDates(a, b, direction) {
-  const dateComparison = a.dueDate.localeCompare(b.dueDate) * direction;
-  if (dateComparison !== 0) return dateComparison;
-  return a.title.localeCompare(b.title, "pt-BR");
+// Ordena pelo campo de data (1 = crescente, -1 = decrescente) e, no empate, pelo título.
+function byDate(field, direction) {
+  return (a, b) => a[field].localeCompare(b[field]) * direction || a.title.localeCompare(b.title, "pt-BR");
 }
 
 function normalizeText(value) {
@@ -1137,13 +1071,13 @@ function parseDate(value) {
 }
 
 function daysUntil(value) {
-  return Math.round((parseDate(value) - parseDate(toDateInputValue(new Date()))) / DAY_MS);
+  return Math.round((parseDate(value) - parseDate(todayValue())) / DAY_MS);
 }
 
 // 0 = esta semana, 1 = próxima (semanas começando na segunda).
 function weekOffset(value) {
   const weekStart = (date) => date.getTime() - ((date.getDay() + 6) % 7) * DAY_MS;
-  const today = parseDate(toDateInputValue(new Date()));
+  const today = parseDate(todayValue());
   return Math.round((weekStart(parseDate(value)) - weekStart(today)) / (7 * DAY_MS));
 }
 
@@ -1167,6 +1101,10 @@ function formatRestoreDate(item) {
   return new Intl.DateTimeFormat("pt-BR", { day: "numeric", month: "long" }).format(
     toMillis(item.deletedAt) + TRASH_DAYS * DAY_MS,
   );
+}
+
+function todayValue() {
+  return toDateInputValue(new Date());
 }
 
 function toDateInputValue(date) {
