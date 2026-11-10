@@ -1138,10 +1138,13 @@ a {
   }
 }
 
-/* Visibilidade por papel: body[data-role] é "anon", "aluno" ou "lider". */
+/* Visibilidade por papel: body[data-role] é "anon", "fora" (fora da lista da turma),
+   "aluno" ou "lider". */
 body[data-role="anon"] .only-user,
+body[data-role="fora"] .only-user,
 body:not([data-role="lider"]) .only-lider,
-body:not([data-role="anon"]) .only-anon {
+body:not([data-role="anon"]) .only-anon,
+body:not([data-role="fora"]) .only-fora {
   display: none !important;
 }
 
@@ -1163,6 +1166,13 @@ body:not([data-role="anon"]) .only-anon {
 
 .login-form {
   grid-template-columns: 1fr;
+}
+
+.no-access {
+  display: grid;
+  align-content: end;
+  justify-items: start;
+  gap: 14px;
 }
 
 .login-hint {

@@ -4,7 +4,11 @@ import { firebaseConfig } from "./firebase-config.js";
 // Hoje é um MOCK que só funciona em DEV: credenciais falsas E acesso por localhost.
 // Fora disso ninguém entra (nem como líder) até o login real existir.
 // Para o login real, troque só o corpo destas três funções (ex.: Firebase Auth
-// com conta Google do Insper) mantendo a mesma interface.
+// com conta Google do Insper) mantendo a mesma interface:
+//   usuário = { id, name, email, role: "lider" | "aluno", member }
+//   - id: uid do Firebase Auth;
+//   - member: existe /members/{email em minúsculas} (lista da Turma B);
+//   - role "lider": existe /leaders/{uid}.
 // O papel daqui serve apenas para a interface; quem garante a permissão é o
 // backend (ver firestore.rules.proposta).
 
@@ -15,9 +19,12 @@ export const DEV_MODE =
 const SESSION_KEY = "agenda-turma-b:DEV:session";
 const ALLOWED_DOMAINS = ["al.insper.edu.br", "insper.edu.br"];
 
+// Os dois primeiros contam como membros da turma; o terceiro serve para testar
+// a tela de quem tem e-mail do Insper mas não está na lista.
 const TEST_USERS = !DEV_MODE ? [] : [
-  { id: "dev-lider", name: "Líder de teste", email: "lider@al.insper.edu.br", role: "lider" },
-  { id: "dev-aluno", name: "Aluno de teste", email: "aluno@al.insper.edu.br", role: "aluno" },
+  { id: "dev-lider", name: "Líder de teste", email: "lider@al.insper.edu.br", role: "lider", member: true },
+  { id: "dev-aluno", name: "Aluno de teste", email: "aluno@al.insper.edu.br", role: "aluno", member: true },
+  { id: "dev-fora", name: "Fora da turma", email: "fora@al.insper.edu.br", role: "aluno", member: false },
 ];
 
 export async function getCurrentUser() {

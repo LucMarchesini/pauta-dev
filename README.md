@@ -94,8 +94,9 @@ A lista de disciplinas está fixa em três lugares. Ao mudar, altere os três:
 - `rodar-dev.bat` abre a agenda em `http://localhost:8000`.
 - `firebase-config.js` usa credenciais falsas, então a agenda roda em modo local e não acessa o banco real.
 - O modo local carrega `dev-data/seed.json` (snapshot real, fora do git). Rode `resetDevData()` no console para voltar a ele.
-- `auth.js` é a camada de login. Hoje é um mock com os usuários `lider@al.insper.edu.br` e `aluno@al.insper.edu.br`; o login real substitui só o corpo das funções desse arquivo.
-- `firestore.rules.proposta` contém as regras novas para revisão, ainda sem deploy.
+- `auth.js` é a camada de login. Hoje é um mock com os usuários `lider@al.insper.edu.br` e `aluno@al.insper.edu.br` (membros da turma) e `fora@al.insper.edu.br` (fora da lista, para testar a tela de acesso restrito); o login real substitui só o corpo das funções desse arquivo.
+- Acesso: só quem tem e-mail Insper verificado **e** está em `/members/{email}` (minúsculas) usa a agenda; líderes também precisam estar em `/members`.
+- `firestore.rules.proposta` contém as regras novas para revisão, ainda sem deploy. Elas são testadas no emulador numa pasta separada do site (`Desktop	urmab-rules-test`, `npm test`), sem dependências neste projeto.
 - `appOptions.classSize` (em `firebase-config.js`) é o N de "X de N concluíram". Em dev vale 2 (os dois usuários de teste); em produção deve ser o número de alunos da turma.
 - Dados da Fase 2: cada atividade tem `doneCount` e `deletedAt`; o progresso de cada pessoa fica em `/progress/{uid}` (`done: { idDaAtividade: true }`), que só o próprio usuário lê. No modo local, o progresso fica em `agenda-turma-b:DEV:progress:v1`.
 - Dados da Fase 3: coleção `notices` com `title`, `body`, `source` (`lideres` ou `professor`), `sourceDetail`, `date`, `pinned` e `deletedAt`. No modo local: `agenda-turma-b:DEV:notices:v1`.

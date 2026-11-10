@@ -70,6 +70,8 @@ const elements = {
   loginHint: document.querySelector("#login-hint"),
   userName: document.querySelector("#user-name"),
   logoutButton: document.querySelector("#logout-button"),
+  noAccessEmail: document.querySelector("#no-access-email"),
+  noAccessLogout: document.querySelector("#no-access-logout"),
 };
 
 // Tudo o que muda entre coleções: formulário, validação e textos.
@@ -81,6 +83,7 @@ const collections = {
     addLabels: ["Adicionando…", "Adicionar atividade"],
     isValid: isValidActivity,
     read: readActivity,
+    defaults: { doneCount: 0 },
     texts: {
       added: "Atividade adicionada à agenda.",
       trashed: "Atividade movida para a lixeira.",
@@ -143,11 +146,18 @@ async function start() {
   bindEvents();
   elements.loginHint.hidden = !DEV_MODE;
   state.user = await getCurrentUser();
-  document.body.dataset.role = state.user?.role ?? "anon";
+  // "fora": e-mail do Insper que não está na lista da turma (/members). Não carrega nada.
+  document.body.dataset.role = !state.user ? "anon" : state.user.member ? state.user.role : "fora";
   elements.userName.textContent = state.user?.name ?? "";
 
   if (!state.user) {
     setConnection("offline", "Entre para ver a agenda");
+    return;
+  }
+
+  if (!state.user.member) {
+    elements.noAccessEmail.textContent = `Conta usada: ${state.user.email}`;
+    setConnection("offline", "Acesso restrito à Turma B");
     return;
   }
 
@@ -163,7 +173,7 @@ async function start() {
   }
 
   try {
-    state.service = await createFirebaseService(state.user.id);
+    state.service = await createFirebaseService(state.user);
     setConnection("online", "Sincronizado com a turma");
     subscribeAll(handleRemoteError);
   } catch (error) {
@@ -192,6 +202,7 @@ function bindEvents() {
   elements.loginForm.addEventListener("submit", handleLogin);
   elements.loginForm.addEventListener("click", handleTestLogin);
   elements.logoutButton.addEventListener("click", handleLogout);
+  elements.noAccessLogout.addEventListener("click", handleLogout);
 }
 
 function isLeader() {
@@ -251,7 +262,7 @@ function subscribeAll(onError) {
 
 // Progresso individual: /progress/{uid} guarda { done: { [activityId]: true } }, legível só
 // pelo próprio usuário. A atividade guarda apenas doneCount, então ninguém vê quem não fez.
-async function createFirebaseService(userId) {
+async function createFirebaseService(user) {
   const base = `https://www.gstatic.com/firebasejs/${FIREBASE_VERSION}`;
   const [{ initializeApp }, authModule, firestore] = await Promise.all([
     import(`${base}/firebase-app.js`),
@@ -266,14 +277,17 @@ async function createFirebaseService(userId) {
   const db = firestore.getFirestore(app);
   const now = firestore.serverTimestamp;
   const reference = (name, id) => firestore.doc(db, name, id);
-  const progress = firestore.doc(db, "progress", userId);
+  const progress = firestore.doc(db, "progress", user.id);
   const update = (name, id, fields) =>
     firestore.updateDoc(reference(name, id), { ...fields, updatedAt: now() });
 
   return {
+    // As regras só deixam alunos lerem o que não está na lixeira, então a consulta
+    // deles precisa pedir exatamente isso (regras não filtram, recusam).
     subscribe(name, onItems, onError) {
+      const source = firestore.collection(db, name);
       firestore.onSnapshot(
-        firestore.collection(db, name),
+        user.role === "lider" ? source : firestore.query(source, firestore.where("deletedAt", "==", null)),
         (snapshot) => {
           onItems(
             snapshot.docs.map((item) => ({
@@ -556,7 +570,7 @@ async function handleSubmit(event, config) {
       await state.service.update(config.name, editingId, data);
       showToast("Alterações salvas.");
     } else {
-      await state.service.add(config.name, data);
+      await state.service.add(config.name, { ...data, ...config.defaults });
       showToast(config.texts.added);
     }
     stopEdit(config);

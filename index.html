@@ -81,6 +81,21 @@
           <span aria-hidden="true">→</span>
         </aside>
 
+        <section class="insert-panel only-fora" id="sem-acesso" aria-labelledby="no-access-title">
+          <div class="section-intro">
+            <p class="section-number">ACESSO</p>
+            <h2 id="no-access-title">Conta fora da turma</h2>
+            <p>Sua conta não está na lista da Turma B. Fale com um líder.</p>
+          </div>
+
+          <div class="no-access">
+            <p class="login-hint" id="no-access-email"></p>
+            <button class="text-button" id="no-access-logout" type="button">
+              Sair e entrar com outra conta
+            </button>
+          </div>
+        </section>
+
         <section class="insert-panel only-anon" id="login" aria-labelledby="login-title">
           <div class="section-intro">
             <p class="section-number">ACESSO</p>
@@ -111,7 +126,8 @@
             <p class="login-hint" id="login-hint" hidden>
               Ambiente de teste: entrar como
               <button type="button" data-email="lider@al.insper.edu.br">líder</button> ou
-              <button type="button" data-email="aluno@al.insper.edu.br">aluno</button>.
+              <button type="button" data-email="aluno@al.insper.edu.br">aluno</button>
+              (ou <button type="button" data-email="fora@al.insper.edu.br">fora da turma</button>).
             </p>
           </form>
         </section>
