@@ -18,6 +18,7 @@
   --page: min(1180px, calc(100% - 48px));
   --actions-col: 48px;
   --serif: "Iowan Old Style", Baskerville, Georgia, serif;
+  --focus-ring: var(--ink); /* anel de foco; branco nos painéis escuros (.insert-panel) */
 
   /* Movimento: durações e curvas únicas para o site todo. */
   --dur-rapida: 150ms;
@@ -96,7 +97,7 @@ input:focus-visible,
 select:focus-visible,
 textarea:focus-visible,
 a:focus-visible {
-  outline: 3px solid var(--ink);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
@@ -394,6 +395,7 @@ a {
   background: var(--ink);
   color: white;
   box-shadow: var(--shadow);
+  --focus-ring: white;
 }
 
 .section-number {
@@ -799,7 +801,7 @@ a {
 }
 
 .task-check input:focus-visible + .checkmark {
-  outline: 3px solid var(--ink);
+  outline: 3px solid var(--focus-ring);
   outline-offset: 3px;
 }
 
