@@ -12,6 +12,7 @@ export const firebaseConfig = Object.freeze({
 });
 
 export const appOptions = Object.freeze({
+  // Não é configurável na prática: as regras (firestore.rules*) fixam /activities.
   collectionName: "activities",
   // Número de alunos da turma, usado em "X de N concluíram". Em dev: os 2 usuários de teste.
   classSize: 2,
