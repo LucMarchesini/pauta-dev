@@ -117,6 +117,7 @@ agenda-turma-b/
 ├── .nojekyll
 ├── app.js                     interface: login, abas, formulários, listas
 ├── auth.js                    login (mock só em DEV) e DEV_MODE
+├── data.js                    serviços de dados: Firebase e modo local (DEV)
 ├── firebase-config.js
 ├── firebase.json
 ├── firestore.rules            regras publicadas hoje
