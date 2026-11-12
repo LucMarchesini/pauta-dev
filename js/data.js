@@ -328,11 +328,14 @@ async function readLocalDb() {
 // arquivada do semestre anterior. Usuários de teste em auth.js.
 async function seedLocalDb() {
   let activities = [];
-  try {
-    const response = await fetch(SEED_URL, { cache: "no-store" });
-    if (response.ok) activities = await response.json();
-  } catch (error) {
-    console.warn("Sem snapshot de dev:", error);
+  // O snapshot real (fora do git) só existe no PC de quem desenvolve.
+  if (["localhost", "127.0.0.1"].includes(location.hostname)) {
+    try {
+      const response = await fetch(SEED_URL, { cache: "no-store" });
+      if (response.ok) activities = await response.json();
+    } catch (error) {
+      console.warn("Sem snapshot de dev:", error);
+    }
   }
   const materias = ["GDE", "DesSoft", "InstruMed", "DesProd", "Tópicos", "ModSim"];
   const membros = { "lider@al.insper.edu.br": "lider", "aluno@al.insper.edu.br": "aluno" };
