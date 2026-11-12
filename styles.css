@@ -482,6 +482,17 @@ svg {
   margin: 2px 0 0;
 }
 
+.setup-banner > div {
+  flex: 1 1 320px;
+}
+
+.setup-banner .ghost-button {
+  align-self: center;
+  border-color: #e0b75c;
+  background: transparent;
+  color: #4d3910;
+}
+
 .archived-banner {
   border: 1px solid var(--line);
   background: #ececea;

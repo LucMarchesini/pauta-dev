@@ -298,6 +298,7 @@ function bindEvents() {
   elements.deleteDialog.addEventListener("close", handleDialogClose);
   elements.loginForm.addEventListener("submit", handleLogin);
   if (DEV_MODE) elements.loginForm.addEventListener("click", handleTestLogin);
+  $("#reset-dev").addEventListener("click", () => window.resetDevData?.());
   $("#logout-button").addEventListener("click", handleLogout);
   $("#no-access-logout").addEventListener("click", handleLogout);
   elements.turmaSelect.addEventListener("change", () => {
@@ -511,6 +512,7 @@ function handleRemoteError(error) {
   elements.setupBanner.hidden = false;
   elements.setupTitle.textContent = "A Pauta não está sincronizando";
   elements.setupMessage.textContent = "Confira a configuração e as regras do Firestore antes de compartilhar o link.";
+  $("#reset-dev").hidden = true;
   showToast("Não foi possível atualizar os dados da turma.");
 }
 

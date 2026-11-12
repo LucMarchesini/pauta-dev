@@ -1,5 +1,6 @@
 import { firebaseConfig } from "../firebase-config.js";
 import { DEV_MODE } from "./auth.js";
+import { addDays, todayValue } from "./dates.js";
 
 // Serviços de dados da Pauta. Os dois (Firebase e local) têm a mesma interface:
 //
@@ -338,6 +339,8 @@ async function seedLocalDb() {
   const atual = emptyTurma({ nome: "Turma B", semestre: "2026.2", materias, tamanho: 2, arquivada: false });
   atual.membros = { ...membros };
   atual.activities = activities;
+  // Sem o snapshot real (ele fica fora do git, ex.: no site de testes): exemplos inventados.
+  if (!activities.length) Object.assign(atual, demoContent());
   const anterior = emptyTurma({ nome: "Turma B", semestre: "2026.1", materias, tamanho: 2, arquivada: true });
   anterior.membros = { ...membros };
   anterior.activities = [
@@ -357,7 +360,60 @@ async function seedLocalDb() {
   return db;
 }
 
-// Para voltar ao estado inicial de DEV, rode no console: resetDevData()
+// Conteúdo inventado, com datas relativas a hoje, para testar todas as abas.
+function demoContent() {
+  const day = (offset) => addDays(todayValue(), offset);
+  const stamp = new Date().toISOString();
+  const base = { deletedAt: null, createdAt: stamp, updatedAt: stamp };
+  const item = (id, fields) => ({ id, ...fields, ...base });
+  return {
+    activities: [
+      item("d-a1", { title: "Lista 5 — integrais", subject: "GDE", dueDate: day(1), dueTime: "23:59" }),
+      item("d-a2", { title: "Relatório do lab 3", subject: "InstruMed", dueDate: day(1) }),
+      item("d-a3", { title: "Projeto 2 — entrega parcial", subject: "DesSoft", dueDate: day(3), dueTime: "08:00" }),
+      item("d-a4", { title: "Protótipo em papel", subject: "DesProd", dueDate: day(6) }),
+      item("d-a5", { title: "Exercícios do capítulo 4", subject: "ModSim", dueDate: day(8) }),
+      item("d-a6", { title: "Quiz 3", subject: "GDE", dueDate: day(9), dueTime: "10:00" }),
+      item("d-a7", { title: "Apresentação do seminário", subject: "Tópicos", dueDate: day(9) }),
+      item("d-a8", { title: "Checkpoint do jogo", subject: "DesSoft", dueDate: day(9) }),
+      item("d-a9", { title: "Prova intermediária", subject: "ModSim", dueDate: day(15), dueTime: "14:00" }),
+      item("d-a10", { title: "Lista 4", subject: "GDE", dueDate: day(-2) }),
+      item("d-a11", { title: "Relatório do lab 2", subject: "InstruMed", dueDate: day(-6) }),
+    ],
+    notices: [
+      item("d-n1", {
+        title: "Esta é a versão de teste",
+        body: "Os dados são de exemplo e ficam só no seu navegador. Entre como líder, aluno ou admin e teste à vontade.",
+        source: "lideres",
+        sourceDetail: "",
+        date: day(0),
+        pinned: true,
+      }),
+      item("d-n2", {
+        title: "Aula de quinta na sala 402",
+        body: "A aula de quinta muda de sala só nesta semana.",
+        source: "professor",
+        sourceDetail: "Prof. de GDE",
+        date: day(-1),
+        pinned: false,
+      }),
+    ],
+    events: [
+      item("d-e1", { type: "workshop", title: "Workshop de Git", description: "Introdução prática, traga o notebook.", date: day(2), time: "18:00", link: "" }),
+      item("d-e2", { type: "palestra", title: "Palestra de carreira em engenharia", description: "Auditório principal.", date: day(5), time: "12:30", link: "" }),
+    ],
+    opportunities: [
+      item("d-o1", { kind: "estagio", title: "Estágio de férias", org: "Empresa exemplo", description: "Vagas para alunos do 2º ano.", deadline: day(10), link: "https://example.com/vagas" }),
+      item("d-o2", { kind: "pesquisa", title: "Iniciação científica em robótica", org: "", description: "Bolsa por um semestre.", deadline: day(20), link: "" }),
+    ],
+    files: [
+      item("d-f1", { title: "Slides da aula 5", category: "slides", subject: "GDE", link: "https://example.com/slides-aula-5" }),
+      item("d-f2", { title: "Calendário de provas", category: "material", subject: "", link: "https://example.com/calendario" }),
+    ],
+  };
+}
+
+// Para voltar ao estado inicial de DEV: botão "Recomeçar do zero" ou resetDevData() no console.
 if (DEV_MODE) {
   window.resetDevData = () => {
     Object.keys(localStorage)

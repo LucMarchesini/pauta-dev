@@ -3,14 +3,23 @@ import { firebaseConfig } from "../firebase-config.js";
 // Camada de autenticação da Pauta: só diz QUEM é a pessoa. Turmas, papel (líder ou
 // aluno) e admin vêm dos dados (ver data.js e firestore.rules.proposta).
 //
-// Hoje é um MOCK que só funciona em DEV: credenciais falsas E acesso por localhost.
+// Hoje é um MOCK que só funciona em DEV: credenciais falsas E um endereço de teste.
 // Fora disso ninguém entra até o login real existir. Para o login real, troque só o
 // corpo destas três funções (Firebase Auth com a conta Microsoft/Outlook do Insper:
 // OAuthProvider("microsoft.com") restrito ao tenant do Insper) mantendo a interface:
 //   usuário = { id: uid do Firebase Auth, name, email }
 
+// Endereços de teste: o PC de quem desenvolve e o site de testes no GitHub Pages
+// (repositório privado LucMarchesini/pauta-dev). Em qualquer outro endereço, nada de DEV.
+const TEST_SITES = [
+  { host: "localhost", path: "/" },
+  { host: "127.0.0.1", path: "/" },
+  { host: "lucmarchesini.github.io", path: "/pauta-dev/" },
+];
+
 export const DEV_MODE =
-  firebaseConfig.apiKey.startsWith("COLE_") && ["localhost", "127.0.0.1"].includes(location.hostname);
+  firebaseConfig.apiKey.startsWith("COLE_") &&
+  TEST_SITES.some((site) => location.hostname === site.host && location.pathname.startsWith(site.path));
 
 const SESSION_KEY = "agenda-turma-b:DEV:session";
 const ALLOWED_DOMAINS = ["al.insper.edu.br", "insper.edu.br"];
