@@ -1,26 +1,24 @@
 // PROPOSTA — NÃO FAZER DEPLOY. Revisar antes de substituir firestore.rules.
 //
-// Quem acessa: só membros da Turma B.
-// - /members/{email} (e-mail em minúsculas como id) lista quem é da turma. Como
-//   /leaders, só se escreve pelo console (ou pelo script de uso único).
-// - Toda leitura e escrita de conteúdo e de progresso exige e-mail Insper
-//   verificado E documento em /members. Líder também precisa estar em /members.
+// Modelo (várias turmas e semestres):
+//   /admins/{email}                     quem administra o site (só pelo console)
+//   /usuarios/{email}                   { turmas: [idDaTurma, ...] } — escrito pelos admins
+//   /turmas/{t}                         { nome, semestre, materias, tamanho, arquivada, ... }
+//   /turmas/{t}/membros/{email}         { papel: 'aluno' | 'lider' } — escrito pelos admins
+//   /turmas/{t}/activities|notices|events|opportunities|files/{id}   conteúdo
+//   /turmas/{t}/progress/{uid}          { done: { [idDaAtividade]: true } } — só o dono
 //
-// Como o papel de líder é validado no backend:
-// - O login real (Firebase Auth com conta Google do Insper) entrega request.auth
-//   com o e-mail verificado do usuário.
-// - Os líderes são cadastrados à mão no console do Firebase, na coleção
-//   /leaders/{uid} (um documento vazio por líder). Nenhum cliente consegue
-//   escrever nessa coleção, então ninguém se promove a líder pelo site.
-// - Toda escrita de conteúdo checa isLeader() aqui. Esconder botões no site é só
-//   conveniência: um aluno que chame a API direto é barrado aqui.
-// - Nada é apagado de verdade pelo app: "apagar" grava deletedAt (lixeira).
+// E-mails sempre em minúsculas como id de documento.
+// - Admin: gerencia turmas, semestres, membros e líderes pelo painel do site. Não
+//   escreve conteúdo (para isso, se coloca como líder da turma).
+// - Líder: escreve o conteúdo da turma e edita a lista de matérias.
+// - Aluno: lê o conteúdo e marca o próprio "eu já fiz".
+// - Turma arquivada (semestre encerrado): todos leem, ninguém escreve conteúdo.
+// - Nada é apagado pelo app: "apagar" grava deletedAt (lixeira de 7 dias).
 //
-// Progresso individual ("eu já fiz"):
-// - /progress/{uid} guarda { done: { [activityId]: true } }; só o dono lê e escreve.
-// - O app grava o progresso e o doneCount da atividade num único writeBatch.
-//   As duas regras abaixo se conferem com getAfter/existsAfter: o progresso só
-//   muda se o doneCount daquela atividade mudar ±1 no mesmo batch, e vice-versa.
+// Login: conta Microsoft/Outlook do Insper. ATENÇÃO: com o provedor microsoft.com o
+// token pode vir com email_verified == false; conferir no primeiro login real e,
+// se for o caso, trocar a checagem por sign_in_provider == 'microsoft.com'.
 
 rules_version = '2';
 
@@ -29,28 +27,39 @@ service cloud.firestore {
 
     // ---------- Quem é quem ----------
 
-    // Logado com e-mail verificado do Insper (aluno ou professor).
     function isInsper() {
       return request.auth != null
         && request.auth.token.email_verified == true
         && request.auth.token.email.lower().matches('.*@(al[.])?insper[.]edu[.]br');
     }
 
-    // E-mail do token em minúsculas: é o id do documento em /members.
     function email() {
       return request.auth.token.email.lower();
     }
 
-    // Membro = usuário do Insper cujo e-mail está em /members.
-    function isMember() {
-      return isInsper()
-        && exists(/databases/$(database)/documents/members/$(email()));
+    function isAdmin() {
+      return isInsper() && exists(/databases/$(database)/documents/admins/$(email()));
     }
 
-    // Líder = membro com documento em /leaders/{uid}.
-    function isLeader() {
-      return isMember()
-        && exists(/databases/$(database)/documents/leaders/$(request.auth.uid));
+    function membroPath(t) {
+      return /databases/$(database)/documents/turmas/$(t)/membros/$(email());
+    }
+
+    function isMember(t) {
+      return isInsper() && exists(membroPath(t));
+    }
+
+    function isLeader(t) {
+      return isMember(t) && get(membroPath(t)).data.papel == 'lider';
+    }
+
+    function turma(t) {
+      return get(/databases/$(database)/documents/turmas/$(t)).data;
+    }
+
+    // Turma aberta = semestre em andamento (aceita escrita de conteúdo).
+    function isOpen(t) {
+      return turma(t).arquivada == false;
     }
 
     // ---------- Validação comum ----------
@@ -59,37 +68,50 @@ service cloud.firestore {
       return value is string && value.matches('[0-9]{4}-[0-9]{2}-[0-9]{2}');
     }
 
-    // As chaves do documento são exatamente estas (nem a mais, nem a menos).
+    // Horário opcional HH:MM (24h); "" = sem horário.
+    function isTime(value) {
+      return value is string && (value == '' || value.matches('([01][0-9]|2[0-3]):[0-5][0-9]'));
+    }
+
     function hasExactly(data, keys) {
       return data.keys().hasOnly(keys) && data.keys().hasAll(keys);
     }
 
-    // Texto com tamanho entre min e max caracteres.
     function isText(value, min, max) {
       return value is string && value.size() >= min && value.size() <= max;
     }
 
-    // Campos de controle presentes em todo documento de conteúdo.
+    // Link vazio (se permitido) ou http(s); bloqueia javascript:, data: etc.
+    function isLink(value, required) {
+      return isText(value, required ? 1 : 0, 500) && (value == '' ? !required : value.matches('https?://.+'));
+    }
+
+    function isEmail(value) {
+      return value.matches('[^@ ]+@(al[.])?insper[.]edu[.]br');
+    }
+
     function hasTimestamps(data) {
       return data.createdAt is timestamp
         && data.updatedAt is timestamp
         && (data.deletedAt == null || data.deletedAt is timestamp);
     }
 
-    // Criação: timestamps do servidor e começa fora da lixeira.
-    function isValidCreate() {
-      return isLeader()
+    // Criação de conteúdo: líder, turma aberta, timestamps do servidor, fora da lixeira.
+    function isValidCreate(t) {
+      return isLeader(t)
+        && isOpen(t)
         && request.resource.data.createdAt == request.time
         && request.resource.data.updatedAt == request.time
         && request.resource.data.deletedAt == null;
     }
 
-    // Edição por líder: createdAt fixo, updatedAt do servidor; deletedAt só pode
-    // ficar igual, ir para a lixeira (= agora) ou ser restaurado (null).
-    function isValidLeaderUpdate() {
+    // Edição por líder: createdAt fixo, updatedAt do servidor; deletedAt só fica igual,
+    // vai para a lixeira (= agora) ou é restaurado (null).
+    function isValidLeaderUpdate(t) {
       let before = resource.data;
       let after = request.resource.data;
-      return isLeader()
+      return isLeader(t)
+        && isOpen(t)
         && after.createdAt == before.createdAt
         && after.updatedAt == request.time
         && (after.deletedAt == before.get('deletedAt', null)
@@ -99,152 +121,233 @@ service cloud.firestore {
 
     // Membros só leem o que não está na lixeira; líderes leem tudo.
     // (O app consulta com where('deletedAt', '==', null) quando não é líder.)
-    function canRead() {
-      return isLeader() || (isMember() && resource.data.deletedAt == null);
+    function canRead(t) {
+      return isLeader(t) || (isMember(t) && resource.data.deletedAt == null);
     }
 
-    // ---------- Atividades ----------
-
-    function isValidActivity(data) {
-      return hasExactly(data, ['title', 'subject', 'dueDate', 'doneCount', 'deletedAt', 'createdAt', 'updatedAt'])
-        && isText(data.title, 3, 120)
-        && data.subject in ['GDE', 'DesSoft', 'InstruMed', 'DesProd', 'Tópicos', 'ModSim']
-        && isDate(data.dueDate)
-        && data.doneCount is int && data.doneCount >= 0
-        && hasTimestamps(data);
+    // Matéria válida: está na lista da turma ou é a que o item já tinha (uma matéria
+    // removida da lista não impede editar o título de uma atividade antiga).
+    function isSubject(t, value, allowEmpty) {
+      return (allowEmpty && value == '')
+        || value in turma(t).materias
+        || (resource != null && value == resource.data.get('subject', null));
     }
 
-    // Documento de progresso do usuário logado, antes e depois da escrita.
-    function progressPath() {
-      return /databases/$(database)/documents/progress/$(request.auth.uid);
-    }
+    // ---------- Admins e usuários ----------
 
-    function doneBefore() {
-      return exists(progressPath()) ? get(progressPath()).data.done : {};
-    }
-
-    function doneAfter() {
-      return existsAfter(progressPath()) ? getAfter(progressPath()).data.done : {};
-    }
-
-    // "Eu já fiz": só o doneCount muda, exatamente ±1, e o progresso do próprio
-    // usuário muda no mesmo batch (marca com +1, desmarca com -1).
-    function isProgressCount(activityId) {
-      let oldCount = resource.data.get('doneCount', 0);
-      let newCount = request.resource.data.doneCount;
-      return isMember()
-        && resource.data.get('deletedAt', null) == null
-        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['doneCount'])
-        && newCount is int
-        && newCount >= 0
-        && ((newCount == oldCount + 1 && !(activityId in doneBefore()) && activityId in doneAfter())
-          || (newCount == oldCount - 1 && activityId in doneBefore() && !(activityId in doneAfter())));
-    }
-
-    match /activities/{activityId} {
-      allow read: if canRead();
-      allow create: if isValidCreate()
-        && isValidActivity(request.resource.data)
-        && request.resource.data.doneCount == 0;
-      // Líder edita o conteúdo (o doneCount não pode ser mexido por aqui) ou
-      // qualquer membro registra o próprio "eu já fiz".
-      allow update: if (isValidLeaderUpdate()
-          && isValidActivity(request.resource.data)
-          && request.resource.data.doneCount == resource.data.doneCount)
-        || isProgressCount(activityId);
-      // Exclusão definitiva só pelo console (o app usa a lixeira).
-      allow delete: if false;
-    }
-
-    // ---------- Progresso individual ----------
-
-    // A atividade mudou o doneCount em `step` no mesmo batch.
-    function countMoved(activityId, step) {
-      let path = /databases/$(database)/documents/activities/$(activityId);
-      return exists(path)
-        && getAfter(path).data.get('doneCount', 0) == get(path).data.get('doneCount', 0) + step;
-    }
-
-    // Cada escrita muda exatamente uma atividade no mapa done (marca ou desmarca)
-    // e precisa vir junto com o doneCount correspondente.
-    function isValidProgressWrite() {
-      let before = resource == null ? {} : resource.data.done;
-      let after = request.resource.data.done;
-      let added = after.keys().removeAll(before.keys());
-      let removed = before.keys().removeAll(after.keys());
-      return request.resource.data.keys().hasOnly(['done'])
-        && after is map
-        && after.values().hasOnly([true])
-        && ((added.size() == 1 && removed.size() == 0 && countMoved(added[0], 1))
-          || (added.size() == 0 && removed.size() == 1 && countMoved(removed[0], -1)));
-    }
-
-    // Membro logado que é o dono de /progress/{uid}.
-    function isOwner(uid) {
-      return isMember() && request.auth.uid == uid;
-    }
-
-    match /progress/{uid} {
-      // Ninguém lê nem escreve o progresso de outra pessoa (nem líderes).
-      allow read: if isOwner(uid);
-      allow create, update: if isOwner(uid) && isValidProgressWrite();
-      allow delete: if false;
-    }
-
-    // ---------- Avisos ----------
-
-    function isValidNotice(data) {
-      return hasExactly(data, ['title', 'body', 'source', 'sourceDetail', 'date', 'pinned', 'deletedAt', 'createdAt', 'updatedAt'])
-        && isText(data.title, 3, 120)
-        && isText(data.body, 1, 2000)
-        && data.source in ['lideres', 'professor']
-        && isText(data.sourceDetail, data.source == 'professor' ? 2 : 0, 80)
-        && isDate(data.date)
-        && data.pinned is bool
-        && hasTimestamps(data);
-    }
-
-    match /notices/{noticeId} {
-      allow read: if canRead();
-      allow create: if isValidCreate() && isValidNotice(request.resource.data);
-      allow update: if isValidLeaderUpdate() && isValidNotice(request.resource.data);
-      allow delete: if false;
-    }
-
-    // ---------- Eventos ----------
-
-    function isValidEvent(data) {
-      return hasExactly(data, ['type', 'title', 'description', 'date', 'link', 'deletedAt', 'createdAt', 'updatedAt'])
-        && data.type in ['lab', 'workshop', 'vaga', 'outro']
-        && isText(data.title, 3, 120)
-        && isText(data.description, 1, 280)
-        && isDate(data.date)
-        // Link vazio ou http(s); bloqueia javascript:, data: etc.
-        && isText(data.link, 0, 500)
-        && (data.link == '' || data.link.matches('https?://.+'))
-        && hasTimestamps(data);
-    }
-
-    match /events/{eventId} {
-      allow read: if canRead();
-      allow create: if isValidCreate() && isValidEvent(request.resource.data);
-      allow update: if isValidLeaderUpdate() && isValidEvent(request.resource.data);
-      allow delete: if false;
-    }
-
-    // ---------- Membros e líderes ----------
-
-    // Cada usuário só confere o próprio e-mail (o app usa isso para saber se é da
-    // turma); ninguém lista os e-mails da turma nem escreve pelo app.
-    match /members/{memberEmail} {
-      allow get: if isInsper() && memberEmail == email();
+    match /admins/{adminEmail} {
+      allow get: if isInsper() && adminEmail == email();
       allow list, write: if false;
     }
 
-    // Cada usuário só lê o próprio documento; escrita só pelo console do Firebase.
-    match /leaders/{uid} {
-      allow read: if isInsper() && request.auth.uid == uid;
-      allow write: if false;
+    match /usuarios/{userEmail} {
+      allow get: if isInsper() && (userEmail == email() || isAdmin());
+      allow list: if isAdmin();
+      allow create, update: if isAdmin()
+        && isEmail(userEmail)
+        && hasExactly(request.resource.data, ['turmas'])
+        && request.resource.data.turmas is list
+        && request.resource.data.turmas.size() <= 20;
+      allow delete: if isAdmin();
+    }
+
+    // ---------- Turmas ----------
+
+    function isValidTurma(data) {
+      return hasExactly(data, ['nome', 'semestre', 'materias', 'tamanho', 'arquivada', 'createdAt', 'updatedAt'])
+        && isText(data.nome, 2, 60)
+        && data.semestre is string && data.semestre.matches('[0-9]{4}[.][12]')
+        && data.materias is list && data.materias.size() >= 1 && data.materias.size() <= 20
+        && data.tamanho is int && data.tamanho >= 0 && data.tamanho <= 500
+        && data.arquivada is bool
+        && data.createdAt is timestamp
+        && data.updatedAt is timestamp;
+    }
+
+    match /turmas/{t} {
+      allow read: if isAdmin() || isMember(t);
+      allow create: if isAdmin()
+        && isValidTurma(request.resource.data)
+        && request.resource.data.createdAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      // Admin edita tudo (menos createdAt); líder só a lista de matérias, com a turma aberta.
+      allow update: if isValidTurma(request.resource.data)
+        && request.resource.data.createdAt == resource.data.createdAt
+        && request.resource.data.updatedAt == request.time
+        && (isAdmin()
+          || (isLeader(t)
+            && resource.data.arquivada == false
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['materias', 'updatedAt'])));
+      allow delete: if false;
+
+      // Cada membro lê o próprio papel; o admin lê e escreve a lista toda.
+      match /membros/{memberEmail} {
+        allow get: if isAdmin() || (isInsper() && memberEmail == email());
+        allow list: if isAdmin();
+        allow create, update: if isAdmin()
+          && isEmail(memberEmail)
+          && hasExactly(request.resource.data, ['papel'])
+          && request.resource.data.papel in ['aluno', 'lider'];
+        allow delete: if isAdmin();
+      }
+
+      // ---------- Atividades ----------
+
+      function isValidActivity(data) {
+        // dueTime é opcional: atividades antigas não têm o campo.
+        return data.keys().hasOnly(['title', 'subject', 'dueDate', 'dueTime', 'doneCount', 'deletedAt', 'createdAt', 'updatedAt'])
+          && data.keys().hasAll(['title', 'subject', 'dueDate', 'doneCount', 'deletedAt', 'createdAt', 'updatedAt'])
+          && isTime(data.get('dueTime', ''))
+          && isText(data.title, 3, 120)
+          && isSubject(t, data.subject, false)
+          && isDate(data.dueDate)
+          && data.doneCount is int && data.doneCount >= 0
+          && hasTimestamps(data);
+      }
+
+      function progressPath() {
+        return /databases/$(database)/documents/turmas/$(t)/progress/$(request.auth.uid);
+      }
+
+      function doneBefore() {
+        return exists(progressPath()) ? get(progressPath()).data.done : {};
+      }
+
+      function doneAfter() {
+        return existsAfter(progressPath()) ? getAfter(progressPath()).data.done : {};
+      }
+
+      // "Eu já fiz": só o doneCount muda, exatamente ±1, junto com o progresso do
+      // próprio usuário no mesmo batch.
+      function isProgressCount(activityId) {
+        let oldCount = resource.data.get('doneCount', 0);
+        let newCount = request.resource.data.doneCount;
+        return isMember(t)
+          && isOpen(t)
+          && resource.data.get('deletedAt', null) == null
+          && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['doneCount'])
+          && newCount is int
+          && newCount >= 0
+          && ((newCount == oldCount + 1 && !(activityId in doneBefore()) && activityId in doneAfter())
+            || (newCount == oldCount - 1 && activityId in doneBefore() && !(activityId in doneAfter())));
+      }
+
+      match /activities/{activityId} {
+        allow read: if canRead(t);
+        allow create: if isValidCreate(t)
+          && isValidActivity(request.resource.data)
+          && request.resource.data.doneCount == 0;
+        allow update: if (isValidLeaderUpdate(t)
+            && isValidActivity(request.resource.data)
+            && request.resource.data.doneCount == resource.data.doneCount)
+          || isProgressCount(activityId);
+        allow delete: if false;
+      }
+
+      // ---------- Progresso individual ----------
+
+      function countMoved(activityId, step) {
+        let path = /databases/$(database)/documents/turmas/$(t)/activities/$(activityId);
+        return exists(path)
+          && getAfter(path).data.get('doneCount', 0) == get(path).data.get('doneCount', 0) + step;
+      }
+
+      function isValidProgressWrite() {
+        let before = resource == null ? {} : resource.data.done;
+        let after = request.resource.data.done;
+        let added = after.keys().removeAll(before.keys());
+        let removed = before.keys().removeAll(after.keys());
+        return request.resource.data.keys().hasOnly(['done'])
+          && after is map
+          && after.values().hasOnly([true])
+          && ((added.size() == 1 && removed.size() == 0 && countMoved(added[0], 1))
+            || (added.size() == 0 && removed.size() == 1 && countMoved(removed[0], -1)));
+      }
+
+      match /progress/{uid} {
+        allow read: if isMember(t) && request.auth.uid == uid;
+        allow create, update: if isMember(t) && isOpen(t) && request.auth.uid == uid && isValidProgressWrite();
+        allow delete: if false;
+      }
+
+      // ---------- Avisos ----------
+
+      function isValidNotice(data) {
+        return hasExactly(data, ['title', 'body', 'source', 'sourceDetail', 'date', 'pinned', 'deletedAt', 'createdAt', 'updatedAt'])
+          && isText(data.title, 3, 120)
+          && isText(data.body, 1, 2000)
+          && data.source in ['lideres', 'professor']
+          && isText(data.sourceDetail, data.source == 'professor' ? 2 : 0, 80)
+          && isDate(data.date)
+          && data.pinned is bool
+          && hasTimestamps(data);
+      }
+
+      match /notices/{id} {
+        allow read: if canRead(t);
+        allow create: if isValidCreate(t) && isValidNotice(request.resource.data);
+        allow update: if isValidLeaderUpdate(t) && isValidNotice(request.resource.data);
+        allow delete: if false;
+      }
+
+      // ---------- Eventos ----------
+
+      function isValidEvent(data) {
+        return data.keys().hasOnly(['type', 'title', 'description', 'date', 'time', 'link', 'deletedAt', 'createdAt', 'updatedAt'])
+          && data.keys().hasAll(['type', 'title', 'description', 'date', 'link', 'deletedAt', 'createdAt', 'updatedAt'])
+          && data.type in ['lab', 'workshop', 'palestra', 'outro']
+          && isText(data.title, 3, 120)
+          && isText(data.description, 1, 280)
+          && isDate(data.date)
+          && isTime(data.get('time', ''))
+          && isLink(data.link, false)
+          && hasTimestamps(data);
+      }
+
+      match /events/{id} {
+        allow read: if canRead(t);
+        allow create: if isValidCreate(t) && isValidEvent(request.resource.data);
+        allow update: if isValidLeaderUpdate(t) && isValidEvent(request.resource.data);
+        allow delete: if false;
+      }
+
+      // ---------- Oportunidades (vagas, estágios, bolsas…) ----------
+
+      function isValidOpportunity(data) {
+        return hasExactly(data, ['kind', 'title', 'org', 'description', 'deadline', 'link', 'deletedAt', 'createdAt', 'updatedAt'])
+          && data.kind in ['estagio', 'pesquisa', 'bolsa', 'competicao', 'outro']
+          && isText(data.title, 3, 120)
+          && isText(data.org, 0, 80)
+          && isText(data.description, 1, 500)
+          && isDate(data.deadline)
+          && isLink(data.link, false)
+          && hasTimestamps(data);
+      }
+
+      match /opportunities/{id} {
+        allow read: if canRead(t);
+        allow create: if isValidCreate(t) && isValidOpportunity(request.resource.data);
+        allow update: if isValidLeaderUpdate(t) && isValidOpportunity(request.resource.data);
+        allow delete: if false;
+      }
+
+      // ---------- Arquivos (só links: OneDrive, Teams, Drive…) ----------
+
+      function isValidFile(data) {
+        return hasExactly(data, ['title', 'category', 'subject', 'link', 'deletedAt', 'createdAt', 'updatedAt'])
+          && isText(data.title, 3, 120)
+          && data.category in ['slides', 'lista', 'gabarito', 'material', 'outro']
+          && isSubject(t, data.subject, true)
+          && isLink(data.link, true)
+          && hasTimestamps(data);
+      }
+
+      match /files/{id} {
+        allow read: if canRead(t);
+        allow create: if isValidCreate(t) && isValidFile(request.resource.data);
+        allow update: if isValidLeaderUpdate(t) && isValidFile(request.resource.data);
+        allow delete: if false;
+      }
     }
 
     // Qualquer outro caminho fica bloqueado.

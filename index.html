@@ -2,18 +2,15 @@
 <html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta
-      name="description"
-      content="Agenda coletiva de atividades da Turma B de Engenharia do Insper."
-    />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="description" content="Pauta: entregas, avisos e prazos das turmas de Engenharia do Insper." />
     <meta name="robots" content="noindex, nofollow, noarchive, nosnippet" />
     <meta name="theme-color" content="#e50505" />
-    <title>Agenda B | Engenharias</title>
+    <title>Pauta | Engenharias Insper</title>
 
     <link rel="icon" href="assets/favicon.svg" type="image/svg+xml" />
     <link rel="stylesheet" href="styles.css" />
-    <script type="module" src="app.js"></script>
+    <script type="module" src="js/app.js"></script>
   </head>
 
   <body>
@@ -21,50 +18,71 @@
 
     <header class="site-header">
       <div class="header-inner">
-        <a class="brand" href="#inicio" translate="no" aria-label="Voltar ao início da Agenda B">
-          <img
-            class="brand-logo"
-            src="assets/insper-logo.svg"
-            alt="Insper"
-            width="137"
-            height="48"
-          />
+        <a class="brand" href="#inicio" translate="no" aria-label="Voltar ao início da Pauta">
+          <img class="brand-logo" src="assets/insper-logo.svg" alt="Insper" width="137" height="48" />
           <span class="brand-divider" aria-hidden="true"></span>
           <span class="brand-context">
-            <strong>Agenda B</strong>
+            <strong>Pauta</strong>
             <span>Engenharias</span>
           </span>
         </a>
 
-        <nav class="main-nav only-user" aria-label="Navegação principal">
-          <a href="#atividades">Atividades</a>
-          <a href="#historico">Histórico</a>
-          <a href="#avisos">Avisos</a>
-          <a href="#eventos">Eventos</a>
-          <a class="nav-primary only-lider" href="#inserir">+ Inserir</a>
+        <div class="header-side">
+          <label class="turma-switch" id="turma-switch" hidden>
+            <span class="visually-hidden">Turma e semestre</span>
+            <select id="turma-select"></select>
+          </label>
           <span class="user-name" id="user-name"></span>
-          <button class="logout-button" id="logout-button" type="button">Sair</button>
-        </nav>
+          <button class="logout-button not-anon" id="logout-button" type="button">Sair</button>
+        </div>
       </div>
+
+      <!-- Abas: no computador, faixa abaixo do cabeçalho; no celular, barra fixa embaixo. -->
+      <nav class="app-nav" aria-label="Seções da agenda">
+        <div class="app-nav-inner" id="tabs" role="tablist">
+          <button class="tab only-user" id="tab-atividades" type="button" role="tab" aria-selected="true" aria-controls="painel-atividades">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 12 3 3 5-6M4 4h16v16H4z" /></svg>
+            <span>Atividades</span>
+          </button>
+          <button class="tab only-user" id="tab-calendario" type="button" role="tab" aria-selected="false" aria-controls="painel-calendario" tabindex="-1">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v14H4zM4 10h16M8 3v5M16 3v5" /></svg>
+            <span>Calendário</span>
+          </button>
+          <button class="tab only-user" id="tab-avisos" type="button" role="tab" aria-selected="false" aria-controls="painel-avisos" tabindex="-1">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h3l6 4V6L7 10H4zM16 9a4 4 0 0 1 0 6" /></svg>
+            <span>Avisos</span>
+          </button>
+          <button class="tab only-user" id="tab-eventos" type="button" role="tab" aria-selected="false" aria-controls="painel-eventos" tabindex="-1">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.6 5.6 6 .7-4.5 4.1 1.2 6-5.3-3-5.3 3 1.2-6L3.4 9.3l6-.7z" /></svg>
+            <span>Eventos</span>
+          </button>
+          <button class="tab only-user" id="tab-oportunidades" type="button" role="tab" aria-selected="false" aria-controls="painel-oportunidades" tabindex="-1">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 8h16v12H4zM9 8V5h6v3M4 13h16" /></svg>
+            <span>Oportunidades</span>
+          </button>
+          <button class="tab only-user" id="tab-arquivos" type="button" role="tab" aria-selected="false" aria-controls="painel-arquivos" tabindex="-1">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h7l2 2h9v11H3z" /></svg>
+            <span>Arquivos</span>
+          </button>
+          <button class="tab only-admin" id="tab-admin" type="button" role="tab" aria-selected="false" aria-controls="painel-admin" tabindex="-1">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.5 8-8 9-4.5-1-8-4-8-9V6z" /></svg>
+            <span>Admin</span>
+          </button>
+        </div>
+      </nav>
     </header>
 
     <main id="conteudo">
-      <section class="hero" id="inicio" aria-labelledby="hero-title">
-        <div class="hero-inner">
+      <section class="page-head" id="inicio" aria-labelledby="page-title">
+        <div class="page-head-inner">
           <div>
-            <p class="eyebrow"><span></span> Turma B · Agenda coletiva</p>
-            <h1 id="hero-title">Tudo o que a turma precisa entregar.</h1>
-            <p class="hero-description">
-              Uma visão única das próximas atividades e de tudo o que já passou.
-            </p>
+            <p class="eyebrow"><span></span> <span id="page-eyebrow">Engenharias Insper · Agenda coletiva</span></p>
+            <h1 id="page-title">Pauta</h1>
+            <p class="page-summary" id="page-summary">Entregas, avisos e oportunidades da sua turma, num lugar só.</p>
           </div>
-
-          <div class="hero-side">
-            <span class="hero-letter" aria-hidden="true">B</span>
-            <div class="connection-pill" id="connection-pill" data-mode="loading">
-              <span class="connection-dot" aria-hidden="true"></span>
-              <span id="connection-label">Conectando…</span>
-            </div>
+          <div class="connection-pill" id="connection-pill" data-mode="loading">
+            <span class="connection-dot" aria-hidden="true"></span>
+            <span id="connection-label">Conectando…</span>
           </div>
         </div>
       </section>
@@ -74,25 +92,28 @@
           <div>
             <strong id="setup-title">Ambiente de desenvolvimento</strong>
             <p id="setup-message">
-              Dados de um snapshot estático, salvos só neste navegador. Nada aqui afeta o site
-              no ar. Para restaurar o snapshot: <code>resetDevData()</code> no console.
+              Dados de exemplo, salvos só neste navegador. Nada aqui afeta o site no ar. Para
+              recomeçar: <code>resetDevData()</code> no console.
             </p>
           </div>
-          <span aria-hidden="true">→</span>
         </aside>
+
+        <aside class="archived-banner" id="archived-banner" hidden>
+          <strong>Semestre arquivado</strong>
+          <span>Esta turma é de um semestre encerrado: dá para consultar, mas não para alterar.</span>
+        </aside>
+
+        <!-- ---------- Acesso ---------- -->
 
         <section class="insert-panel only-fora" id="sem-acesso" aria-labelledby="no-access-title">
           <div class="section-intro">
             <p class="section-number">ACESSO</p>
-            <h2 id="no-access-title">Conta fora da turma</h2>
-            <p>Sua conta não está na lista da Turma B. Fale com um líder.</p>
+            <h2 id="no-access-title">Conta fora das turmas</h2>
+            <p>Sua conta ainda não está em nenhuma turma. Fale com um líder ou com os administradores.</p>
           </div>
-
           <div class="no-access">
             <p class="login-hint" id="no-access-email"></p>
-            <button class="text-button" id="no-access-logout" type="button">
-              Sair e entrar com outra conta
-            </button>
+            <button class="text-button" id="no-access-logout" type="button">Sair e entrar com outra conta</button>
           </div>
         </section>
 
@@ -100,143 +121,63 @@
           <div class="section-intro">
             <p class="section-number">ACESSO</p>
             <h2 id="login-title">Entrar</h2>
-            <p>A agenda é exclusiva para a turma. Use seu e-mail do Insper.</p>
+            <p>A Pauta é exclusiva para as turmas. Use seu e-mail do Insper (Outlook).</p>
           </div>
 
           <form class="activity-form login-form" id="login-form" novalidate>
             <div class="field">
               <label for="login-email">E-mail do Insper</label>
-              <input
-                id="login-email"
-                name="email"
-                type="email"
-                placeholder="nome@al.insper.edu.br"
-                autocomplete="email"
-                spellcheck="false"
-                required
-              />
+              <input id="login-email" name="email" type="email" placeholder="nome@al.insper.edu.br" autocomplete="email" spellcheck="false" required />
             </div>
-
             <button class="submit-button" type="submit">
               <span>Entrar</span>
-              <svg viewBox="0 0 24 24" aria-hidden="true">
-                <path d="M5 12h14M13 6l6 6-6 6" />
-              </svg>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
             </button>
-
             <p class="login-hint" id="login-hint" hidden>
               Ambiente de teste: entrar como
-              <button type="button" data-email="lider@al.insper.edu.br">líder</button> ou
-              <button type="button" data-email="aluno@al.insper.edu.br">aluno</button>
+              <button type="button" data-email="lider@al.insper.edu.br">líder</button>,
+              <button type="button" data-email="aluno@al.insper.edu.br">aluno</button>,
+              <button type="button" data-email="admin@insper.edu.br">admin</button>
               (ou <button type="button" data-email="fora@al.insper.edu.br">fora da turma</button>).
             </p>
           </form>
         </section>
 
-        <div class="tabs only-user" id="tabs" role="tablist" aria-label="Seções da agenda">
-          <button
-            class="tab"
-            id="tab-atividades"
-            type="button"
-            role="tab"
-            aria-selected="true"
-            aria-controls="painel-atividades"
-          >
-            Atividades
-          </button>
-          <button
-            class="tab"
-            id="tab-avisos"
-            type="button"
-            role="tab"
-            aria-selected="false"
-            aria-controls="painel-avisos"
-            tabindex="-1"
-          >
-            Avisos
-          </button>
-          <button
-            class="tab"
-            id="tab-eventos"
-            type="button"
-            role="tab"
-            aria-selected="false"
-            aria-controls="painel-eventos"
-            tabindex="-1"
-          >
-            Eventos
-          </button>
-        </div>
+        <!-- ---------- Atividades ---------- -->
 
-        <div class="tab-panel" id="painel-atividades" role="tabpanel" aria-labelledby="tab-atividades">
-          <section class="insert-panel only-lider" id="inserir" aria-labelledby="insert-title">
-            <div class="section-intro">
-              <p class="section-number">01 · INSERIR</p>
-              <h2 id="insert-title">Nova atividade</h2>
-              <p>Adicione apenas informações confirmadas com o professor.</p>
-            </div>
-
-            <form class="activity-form" id="activity-form" novalidate>
-              <div class="field">
-                <label for="activity-date">Data de entrega</label>
-                <input id="activity-date" name="dueDate" type="date" required />
-              </div>
-
-              <div class="field">
-                <label for="activity-title">Título da atividade</label>
-                <input
-                  id="activity-title"
-                  name="title"
-                  type="text"
-                  placeholder="Ex.: Lista 03 — funções"
-                  minlength="3"
-                  maxlength="120"
-                  autocomplete="off"
-                  required
-                />
-              </div>
-
-              <div class="field">
-                <label for="activity-subject">Disciplina</label>
-                <select id="activity-subject" name="subject" required>
-                  <option value="" selected disabled>Selecionar</option>
-                  <option value="GDE" translate="no">GDE</option>
-                  <option value="DesSoft" translate="no">DesSoft</option>
-                  <option value="InstruMed" translate="no">InstruMed</option>
-                  <option value="DesProd" translate="no">DesProd</option>
-                  <option value="Tópicos" translate="no">Tópicos</option>
-                  <option value="ModSim" translate="no">ModSim</option>
-                </select>
-              </div>
-
-              <button class="submit-button" type="submit">
-                <span>Adicionar atividade</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </button>
-              <button class="text-button cancel-edit" type="button" hidden>Cancelar edição</button>
-            </form>
-          </section>
-
-          <section class="activity-section only-user" id="atividades" aria-labelledby="activities-title">
-            <div class="section-heading">
+        <div class="tab-panel only-user" id="painel-atividades" role="tabpanel" aria-labelledby="tab-atividades">
+          <section class="panel" id="atividades" aria-labelledby="activities-title">
+            <div class="panel-head">
               <div>
-                <p class="section-number">02 · ATIVIDADES</p>
+                <p class="section-number">ATIVIDADES</p>
                 <h2 id="activities-title">Próximas entregas</h2>
               </div>
-              <span class="count-badge" id="activities-count">0</span>
+              <div class="panel-actions">
+                <span class="count-badge" id="activities-count">0</span>
+                <button class="ghost-button only-lider" id="materias-button" type="button">Matérias</button>
+                <button class="primary-button only-lider" type="button" data-new="activities">+ Nova atividade</button>
+              </div>
             </div>
 
-            <div class="filter-chips" id="subject-filter" role="group" aria-label="Filtrar por disciplina"></div>
+            <ol class="week-load" id="week-load" aria-label="Entregas por semana"></ol>
+
+            <div class="list-tools">
+              <div class="filter-chips" id="subject-filter" role="group" aria-label="Filtrar por matéria"></div>
+              <div class="tool-buttons">
+                <button class="tool-button" id="summary-button" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 8h11v12H8zM5 16V4h11" /></svg>
+                  Resumo da semana
+                </button>
+                <button class="tool-button" id="calendar-button" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16v14H4zM4 10h16M8 3v5M16 3v5M12 13v5M9.5 15.5h5" /></svg>
+                  No meu calendário
+                </button>
+              </div>
+            </div>
 
             <div class="table-card">
               <div class="table-header" aria-hidden="true">
-                <span>Eu fiz</span>
-                <span>Data</span>
-                <span>Atividade</span>
-                <span>Disciplina</span>
-                <span></span>
+                <span>Eu fiz</span><span>Data</span><span>Atividade</span><span>Matéria</span><span></span>
               </div>
               <ul class="activity-list" id="activities-list"></ul>
               <div class="empty-state" id="activities-empty" hidden>
@@ -249,27 +190,12 @@
             </div>
           </section>
 
-          <section
-            class="activity-section only-user"
-            id="historico"
-            aria-labelledby="history-title"
-          >
-            <div class="section-heading">
-              <div>
-                <p class="section-number">03 · HISTÓRICO</p>
-                <h2 id="history-title">Entregas passadas</h2>
-              </div>
+          <details class="fold" id="historico">
+            <summary>
+              <span class="fold-title">Histórico <small>entregas passadas</small></span>
               <span class="count-badge count-badge-muted" id="history-count">0</span>
-            </div>
-
+            </summary>
             <div class="table-card history-card">
-              <div class="table-header" aria-hidden="true">
-                <span>Eu fiz</span>
-                <span>Data</span>
-                <span>Atividade</span>
-                <span>Disciplina</span>
-                <span></span>
-              </div>
               <ul class="activity-list" id="history-list"></ul>
               <div class="empty-state" id="history-empty" hidden>
                 <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
@@ -279,281 +205,251 @@
                 </div>
               </div>
             </div>
-          </section>
+          </details>
 
-          <section
-            class="activity-section only-lider"
-            id="lixeira"
-            aria-labelledby="trash-title"
-          >
-            <div class="section-heading">
-              <div>
-                <p class="section-number">04 · LIXEIRA</p>
-                <h2 id="trash-title">Apagadas recentemente</h2>
-              </div>
+          <details class="fold only-lider" id="lixeira">
+            <summary>
+              <span class="fold-title">Lixeira <small>apagadas nos últimos 7 dias</small></span>
               <span class="count-badge count-badge-muted" id="trash-count">0</span>
-            </div>
-
+            </summary>
             <div class="table-card history-card trash-card">
               <ul class="activity-list" id="trash-list"></ul>
               <div class="empty-state" id="trash-empty" hidden>
                 <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
-                <div>
-                  <strong>A lixeira está vazia</strong>
-                  <p>Atividades apagadas ficam aqui por 7 dias e podem ser restauradas.</p>
+                <div><strong>A lixeira está vazia</strong><p>Atividades apagadas ficam aqui por 7 dias.</p></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- ---------- Calendário ---------- -->
+
+        <div class="tab-panel only-user" id="painel-calendario" role="tabpanel" aria-labelledby="tab-calendario" hidden>
+          <section class="panel" id="calendario" aria-labelledby="calendar-title">
+            <div class="panel-head">
+              <div>
+                <p class="section-number">CALENDÁRIO</p>
+                <h2 id="calendar-title">Mês</h2>
+              </div>
+              <div class="panel-actions">
+                <div class="month-nav" role="group" aria-label="Trocar de mês">
+                  <button class="icon-button" id="month-prev" type="button" aria-label="Mês anterior">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m15 5-7 7 7 7" /></svg>
+                  </button>
+                  <button class="ghost-button" id="month-today" type="button">Hoje</button>
+                  <button class="icon-button" id="month-next" type="button" aria-label="Próximo mês">
+                    <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m9 5 7 7-7 7" /></svg>
+                  </button>
                 </div>
+                <button class="tool-button" id="export-all-button" type="button">
+                  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11M7 10l5 5 5-5M5 20h14" /></svg>
+                  Exportar tudo (.ics)
+                </button>
+              </div>
+            </div>
+
+            <ul class="calendar-legend" aria-label="Legenda">
+              <li class="is-activity">Entregas</li>
+              <li class="is-event">Eventos</li>
+              <li class="is-opportunity">Prazos de oportunidades</li>
+            </ul>
+
+            <div class="calendar-layout">
+              <div class="calendar-card">
+                <div class="calendar-weekdays" aria-hidden="true">
+                  <span>Seg</span><span>Ter</span><span>Qua</span><span>Qui</span><span>Sex</span><span>Sáb</span><span>Dom</span>
+                </div>
+                <div class="calendar-grid" id="calendar-grid" role="group" aria-labelledby="calendar-title"></div>
+              </div>
+
+              <div class="day-detail" id="day-detail" aria-live="polite">
+                <h3 id="day-title">Hoje</h3>
+                <ul class="day-list" id="day-list"></ul>
+                <p class="day-empty" id="day-empty">Nada marcado para este dia.</p>
               </div>
             </div>
           </section>
         </div>
 
-        <div
-          class="tab-panel"
-          id="painel-avisos"
-          role="tabpanel"
-          aria-labelledby="tab-avisos"
-          hidden
-        >
-          <section class="insert-panel only-lider" id="publicar-aviso" aria-labelledby="notice-form-title">
-            <div class="section-intro">
-              <p class="section-number">01 · PUBLICAR</p>
-              <h2 id="notice-form-title">Novo aviso</h2>
-              <p>Avisos dos líderes ou repassados dos professores.</p>
-            </div>
+        <!-- ---------- Avisos ---------- -->
 
-            <form class="activity-form" id="notice-form" novalidate>
-              <div class="field field-wide">
-                <label for="notice-title">Título do aviso</label>
-                <input
-                  id="notice-title"
-                  name="title"
-                  type="text"
-                  placeholder="Ex.: Aula de quinta na sala 402…"
-                  minlength="3"
-                  maxlength="120"
-                  autocomplete="off"
-                  required
-                />
-              </div>
-
-              <div class="field field-wide">
-                <label for="notice-body">Texto</label>
-                <textarea id="notice-body" name="body" rows="4" maxlength="2000" required></textarea>
-              </div>
-
-              <div class="field">
-                <label for="notice-source">Origem</label>
-                <select id="notice-source" name="source">
-                  <option value="lideres">Líderes</option>
-                  <option value="professor">Professor</option>
-                </select>
-              </div>
-
-              <div class="field" id="notice-detail-field" hidden>
-                <label for="notice-detail">Professor e disciplina</label>
-                <input
-                  id="notice-detail"
-                  name="sourceDetail"
-                  type="text"
-                  placeholder="Ex.: Prof. Ana, GDE…"
-                  maxlength="80"
-                  autocomplete="off"
-                />
-              </div>
-
-              <div class="field">
-                <label for="notice-date">Data</label>
-                <input id="notice-date" name="date" type="date" required />
-              </div>
-
-              <label class="field-check">
-                <input name="pinned" type="checkbox" />
-                Fixar no topo
-              </label>
-
-              <button class="submit-button" type="submit">
-                <span>Publicar aviso</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </button>
-              <button class="text-button cancel-edit" type="button" hidden>Cancelar edição</button>
-            </form>
-          </section>
-
-          <section class="activity-section only-user" id="avisos" aria-labelledby="notices-title">
-            <div class="section-heading">
+        <div class="tab-panel only-user" id="painel-avisos" role="tabpanel" aria-labelledby="tab-avisos" hidden>
+          <section class="panel" id="avisos" aria-labelledby="notices-title">
+            <div class="panel-head">
               <div>
-                <p class="section-number">02 · AVISOS</p>
+                <p class="section-number">AVISOS</p>
                 <h2 id="notices-title">Avisos da turma</h2>
               </div>
-              <span class="count-badge" id="notices-count">0</span>
+              <div class="panel-actions">
+                <span class="count-badge" id="notices-count">0</span>
+                <button class="primary-button only-lider" type="button" data-new="notices">+ Novo aviso</button>
+              </div>
             </div>
-
             <div class="table-card">
               <ul class="entry-list" id="notices-list"></ul>
               <div class="empty-state" id="notices-empty" hidden>
                 <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
-                <div>
-                  <strong>Nenhum aviso por enquanto</strong>
-                  <p>Quando os líderes publicarem um aviso, ele aparecerá aqui.</p>
-                </div>
+                <div><strong>Nenhum aviso por enquanto</strong><p>Quando os líderes publicarem um aviso, ele aparecerá aqui.</p></div>
               </div>
             </div>
           </section>
 
-          <section
-            class="activity-section only-lider"
-            id="lixeira-avisos"
-            aria-labelledby="notice-trash-title"
-          >
-            <div class="section-heading">
-              <div>
-                <p class="section-number">03 · LIXEIRA</p>
-                <h2 id="notice-trash-title">Avisos apagados</h2>
-              </div>
+          <details class="fold only-lider" id="lixeira-avisos">
+            <summary>
+              <span class="fold-title">Lixeira <small>avisos apagados</small></span>
               <span class="count-badge count-badge-muted" id="notice-trash-count">0</span>
-            </div>
-
+            </summary>
             <div class="table-card history-card trash-card">
               <ul class="entry-list" id="notice-trash-list"></ul>
               <div class="empty-state" id="notice-trash-empty" hidden>
                 <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
-                <div>
-                  <strong>A lixeira está vazia</strong>
-                  <p>Avisos apagados ficam aqui por 7 dias e podem ser restaurados.</p>
-                </div>
+                <div><strong>A lixeira está vazia</strong><p>Avisos apagados ficam aqui por 7 dias.</p></div>
               </div>
             </div>
-          </section>
+          </details>
         </div>
 
-        <div
-          class="tab-panel"
-          id="painel-eventos"
-          role="tabpanel"
-          aria-labelledby="tab-eventos"
-          hidden
-        >
-          <section class="insert-panel only-lider" id="publicar-evento" aria-labelledby="event-form-title">
-            <div class="section-intro">
-              <p class="section-number">01 · PUBLICAR</p>
-              <h2 id="event-form-title">Novo evento</h2>
-              <p>Laboratórios, workshops e oportunidades para a turma.</p>
-            </div>
+        <!-- ---------- Eventos ---------- -->
 
-            <form class="activity-form" id="event-form" novalidate>
-              <div class="field">
-                <label for="event-type">Tipo</label>
-                <select id="event-type" name="type" required>
-                  <option value="" selected disabled>Selecionar</option>
-                  <option value="lab">Laboratório</option>
-                  <option value="workshop">Workshop</option>
-                  <option value="vaga">Vaga/Oportunidade</option>
-                  <option value="outro">Outro</option>
-                </select>
-              </div>
-
-              <div class="field">
-                <label for="event-title">Título do evento</label>
-                <input
-                  id="event-title"
-                  name="title"
-                  type="text"
-                  placeholder="Ex.: Lab de InstruMed na sala 105…"
-                  minlength="3"
-                  maxlength="120"
-                  autocomplete="off"
-                  required
-                />
-              </div>
-
-              <div class="field">
-                <label for="event-date">Data</label>
-                <input id="event-date" name="date" type="date" required />
-              </div>
-
-              <div class="field field-wide">
-                <label for="event-description">Descrição curta</label>
-                <textarea
-                  id="event-description"
-                  name="description"
-                  rows="3"
-                  maxlength="280"
-                  required
-                ></textarea>
-              </div>
-
-              <div class="field field-wide">
-                <label for="event-link">Link (opcional)</label>
-                <input
-                  id="event-link"
-                  name="link"
-                  type="url"
-                  inputmode="url"
-                  placeholder="https://…"
-                  pattern="https?://.+"
-                  title="Use um link que comece com http:// ou https://"
-                  maxlength="500"
-                  autocomplete="off"
-                  spellcheck="false"
-                />
-              </div>
-
-              <button class="submit-button" type="submit">
-                <span>Publicar evento</span>
-                <svg viewBox="0 0 24 24" aria-hidden="true">
-                  <path d="M5 12h14M13 6l6 6-6 6" />
-                </svg>
-              </button>
-              <button class="text-button cancel-edit" type="button" hidden>Cancelar edição</button>
-            </form>
-          </section>
-
-          <section class="activity-section only-user" id="eventos" aria-labelledby="events-title">
-            <div class="section-heading">
+        <div class="tab-panel only-user" id="painel-eventos" role="tabpanel" aria-labelledby="tab-eventos" hidden>
+          <section class="panel" id="eventos" aria-labelledby="events-title">
+            <div class="panel-head">
               <div>
-                <p class="section-number">02 · EVENTOS</p>
+                <p class="section-number">EVENTOS</p>
                 <h2 id="events-title">Próximos eventos</h2>
               </div>
-              <span class="count-badge" id="events-count">0</span>
+              <div class="panel-actions">
+                <span class="count-badge" id="events-count">0</span>
+                <button class="primary-button only-lider" type="button" data-new="events">+ Novo evento</button>
+              </div>
             </div>
-
             <div class="filter-chips" id="type-filter" role="group" aria-label="Filtrar por tipo"></div>
-
             <div class="table-card">
               <ul class="entry-list" id="events-list"></ul>
               <div class="empty-state" id="events-empty" hidden>
                 <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
-                <div>
-                  <strong>Nenhum evento por vir</strong>
-                  <p>Laboratórios, workshops e vagas publicados pelos líderes aparecerão aqui.</p>
-                </div>
+                <div><strong>Nenhum evento por vir</strong><p>Laboratórios, workshops e palestras aparecerão aqui.</p></div>
               </div>
             </div>
           </section>
 
-          <section
-            class="activity-section only-lider"
-            id="lixeira-eventos"
-            aria-labelledby="event-trash-title"
-          >
-            <div class="section-heading">
-              <div>
-                <p class="section-number">03 · LIXEIRA</p>
-                <h2 id="event-trash-title">Eventos apagados</h2>
-              </div>
+          <details class="fold only-lider" id="lixeira-eventos">
+            <summary>
+              <span class="fold-title">Lixeira <small>eventos apagados</small></span>
               <span class="count-badge count-badge-muted" id="event-trash-count">0</span>
-            </div>
-
+            </summary>
             <div class="table-card history-card trash-card">
               <ul class="entry-list" id="event-trash-list"></ul>
               <div class="empty-state" id="event-trash-empty" hidden>
                 <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
-                <div>
-                  <strong>A lixeira está vazia</strong>
-                  <p>Eventos apagados ficam aqui por 7 dias e podem ser restaurados.</p>
-                </div>
+                <div><strong>A lixeira está vazia</strong><p>Eventos apagados ficam aqui por 7 dias.</p></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- ---------- Oportunidades ---------- -->
+
+        <div class="tab-panel only-user" id="painel-oportunidades" role="tabpanel" aria-labelledby="tab-oportunidades" hidden>
+          <section class="panel" id="oportunidades" aria-labelledby="opportunities-title">
+            <div class="panel-head">
+              <div>
+                <p class="section-number">OPORTUNIDADES</p>
+                <h2 id="opportunities-title">Inscrições abertas</h2>
+              </div>
+              <div class="panel-actions">
+                <span class="count-badge" id="opportunities-count">0</span>
+                <button class="primary-button only-lider" type="button" data-new="opportunities">+ Nova oportunidade</button>
+              </div>
+            </div>
+            <div class="filter-chips" id="kind-filter" role="group" aria-label="Filtrar por tipo"></div>
+            <div class="table-card">
+              <ul class="entry-list" id="opportunities-list"></ul>
+              <div class="empty-state" id="opportunities-empty" hidden>
+                <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+                <div><strong>Nenhuma inscrição aberta</strong><p>Estágios, pesquisas, bolsas e competições aparecerão aqui até o prazo.</p></div>
+              </div>
+            </div>
+          </section>
+
+          <details class="fold only-lider" id="lixeira-oportunidades">
+            <summary>
+              <span class="fold-title">Lixeira <small>oportunidades apagadas</small></span>
+              <span class="count-badge count-badge-muted" id="opportunity-trash-count">0</span>
+            </summary>
+            <div class="table-card history-card trash-card">
+              <ul class="entry-list" id="opportunity-trash-list"></ul>
+              <div class="empty-state" id="opportunity-trash-empty" hidden>
+                <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+                <div><strong>A lixeira está vazia</strong><p>Oportunidades apagadas ficam aqui por 7 dias.</p></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- ---------- Arquivos ---------- -->
+
+        <div class="tab-panel only-user" id="painel-arquivos" role="tabpanel" aria-labelledby="tab-arquivos" hidden>
+          <section class="panel" id="arquivos" aria-labelledby="files-title">
+            <div class="panel-head">
+              <div>
+                <p class="section-number">ARQUIVOS</p>
+                <h2 id="files-title">Arquivos importantes</h2>
+              </div>
+              <div class="panel-actions">
+                <span class="count-badge" id="files-count">0</span>
+                <button class="primary-button only-lider" type="button" data-new="files">+ Novo arquivo</button>
+              </div>
+            </div>
+            <p class="panel-note">Links para o OneDrive, Teams ou Drive. O arquivo continua onde está; aqui fica só o atalho.</p>
+            <div class="filter-chips" id="file-filter" role="group" aria-label="Filtrar por matéria"></div>
+            <div class="table-card">
+              <ul class="entry-list" id="files-list"></ul>
+              <div class="empty-state" id="files-empty" hidden>
+                <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+                <div><strong>Nenhum arquivo ainda</strong><p>Slides, listas e gabaritos compartilhados pelos líderes aparecerão aqui.</p></div>
+              </div>
+            </div>
+          </section>
+
+          <details class="fold only-lider" id="lixeira-arquivos">
+            <summary>
+              <span class="fold-title">Lixeira <small>arquivos apagados</small></span>
+              <span class="count-badge count-badge-muted" id="file-trash-count">0</span>
+            </summary>
+            <div class="table-card history-card trash-card">
+              <ul class="entry-list" id="file-trash-list"></ul>
+              <div class="empty-state" id="file-trash-empty" hidden>
+                <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+                <div><strong>A lixeira está vazia</strong><p>Arquivos apagados ficam aqui por 7 dias.</p></div>
+              </div>
+            </div>
+          </details>
+        </div>
+
+        <!-- ---------- Admin ---------- -->
+
+        <div class="tab-panel only-admin" id="painel-admin" role="tabpanel" aria-labelledby="tab-admin" hidden>
+          <section class="panel" id="admin" aria-labelledby="admin-title">
+            <div class="panel-head">
+              <div>
+                <p class="section-number">ADMIN</p>
+                <h2 id="admin-title">Turmas e semestres</h2>
+              </div>
+              <div class="panel-actions">
+                <span class="count-badge count-badge-muted" id="admin-count">0</span>
+                <button class="primary-button" id="new-turma-button" type="button">+ Nova turma</button>
+              </div>
+            </div>
+            <p class="panel-note">
+              Cada turma é de um semestre. No fim do semestre, arquive a turma (fica só leitura) e crie a do
+              próximo, copiando os membros. Novos admins entram pelo console do Firebase (<code>/admins/{e-mail}</code>).
+            </p>
+            <div class="table-card">
+              <ul class="admin-list" id="admin-list"></ul>
+              <div class="empty-state" id="admin-empty" hidden>
+                <span class="empty-icon empty-icon-muted" aria-hidden="true">—</span>
+                <div><strong>Nenhuma turma ainda</strong><p>Crie a primeira turma para começar.</p></div>
               </div>
             </div>
           </section>
@@ -564,33 +460,365 @@
     <footer class="site-footer">
       <div class="footer-inner">
         <div>
-          <strong translate="no">Agenda B</strong>
+          <strong translate="no">Pauta</strong>
           <p>Feita para simplificar a rotina da turma.</p>
         </div>
         <p class="footer-credit">
-          Criado por <strong>Eduardo Marques</strong> · Engenharia de Computação
+          Criado por <strong>Eduardo Marques</strong> e <strong>Lucas Marchesini</strong>
           <span>Projeto estudantil independente, não oficial.</span>
         </p>
       </div>
     </footer>
 
+    <!-- ---------- Formulários (janelas) ---------- -->
+
+    <dialog class="form-dialog" id="activities-dialog" aria-labelledby="activities-form-title">
+      <div class="form-dialog-head">
+        <div>
+          <p class="section-number">INSERIR</p>
+          <h2 id="activities-form-title">Nova atividade</h2>
+        </div>
+        <button class="dialog-close" type="button" data-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <p class="form-dialog-note">Adicione apenas informações confirmadas com o professor.</p>
+      <form class="activity-form" id="activity-form" novalidate>
+        <div class="field field-wide">
+          <label for="activity-title">Título da atividade</label>
+          <input id="activity-title" name="title" type="text" placeholder="Ex.: Lista 03 — funções" minlength="3" maxlength="120" autocomplete="off" required />
+        </div>
+        <div class="field">
+          <label for="activity-date">Data de entrega</label>
+          <input id="activity-date" name="dueDate" type="date" required />
+        </div>
+        <div class="field">
+          <label for="activity-time">Horário (opcional)</label>
+          <input id="activity-time" name="dueTime" type="time" />
+        </div>
+        <div class="field field-wide">
+          <label for="activity-subject">Matéria</label>
+          <select id="activity-subject" name="subject" required>
+            <option value="" selected disabled>Selecionar</option>
+            <!-- Matérias da turma: geradas pelo app (o líder edita em "Matérias"). -->
+          </select>
+        </div>
+        <button class="submit-button" type="submit">
+          <span>Adicionar atividade</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </button>
+      </form>
+    </dialog>
+
+    <dialog class="form-dialog" id="notices-dialog" aria-labelledby="notices-form-title">
+      <div class="form-dialog-head">
+        <div>
+          <p class="section-number">PUBLICAR</p>
+          <h2 id="notices-form-title">Novo aviso</h2>
+        </div>
+        <button class="dialog-close" type="button" data-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <form class="activity-form" id="notice-form" novalidate>
+        <div class="field field-wide">
+          <label for="notice-title">Título do aviso</label>
+          <input id="notice-title" name="title" type="text" placeholder="Ex.: Aula de quinta na sala 402…" minlength="3" maxlength="120" autocomplete="off" required />
+        </div>
+        <div class="field field-wide">
+          <label for="notice-body">Texto</label>
+          <textarea id="notice-body" name="body" rows="4" maxlength="2000" required></textarea>
+        </div>
+        <div class="field">
+          <label for="notice-source">Origem</label>
+          <select id="notice-source" name="source">
+            <option value="lideres">Líderes</option>
+            <option value="professor">Professor</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="notice-date">Data</label>
+          <input id="notice-date" name="date" type="date" required />
+        </div>
+        <div class="field field-wide" id="notice-detail-field" hidden>
+          <label for="notice-detail">Professor e matéria</label>
+          <input id="notice-detail" name="sourceDetail" type="text" placeholder="Ex.: Prof. Ana, GDE…" maxlength="80" autocomplete="off" />
+        </div>
+        <label class="field-check">
+          <input name="pinned" type="checkbox" />
+          Fixar no topo
+        </label>
+        <button class="submit-button" type="submit">
+          <span>Publicar aviso</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </button>
+      </form>
+    </dialog>
+
+    <dialog class="form-dialog" id="events-dialog" aria-labelledby="events-form-title">
+      <div class="form-dialog-head">
+        <div>
+          <p class="section-number">PUBLICAR</p>
+          <h2 id="events-form-title">Novo evento</h2>
+        </div>
+        <button class="dialog-close" type="button" data-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <form class="activity-form" id="event-form" novalidate>
+        <div class="field field-wide">
+          <label for="event-title">Título do evento</label>
+          <input id="event-title" name="title" type="text" placeholder="Ex.: Lab de InstruMed na sala 105…" minlength="3" maxlength="120" autocomplete="off" required />
+        </div>
+        <div class="field field-wide">
+          <label for="event-type">Tipo</label>
+          <select id="event-type" name="type" required>
+            <option value="" selected disabled>Selecionar</option>
+            <option value="lab">Laboratório</option>
+            <option value="workshop">Workshop</option>
+            <option value="palestra">Palestra</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="event-date">Data</label>
+          <input id="event-date" name="date" type="date" required />
+        </div>
+        <div class="field">
+          <label for="event-time">Horário (opcional)</label>
+          <input id="event-time" name="time" type="time" />
+        </div>
+        <div class="field field-wide">
+          <label for="event-description">Descrição curta</label>
+          <textarea id="event-description" name="description" rows="3" maxlength="280" required></textarea>
+        </div>
+        <div class="field field-wide">
+          <label for="event-link">Link (opcional)</label>
+          <input id="event-link" name="link" type="url" inputmode="url" placeholder="https://…" pattern="https?://.+" maxlength="500" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="submit-button" type="submit">
+          <span>Publicar evento</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </button>
+      </form>
+    </dialog>
+
+    <dialog class="form-dialog" id="opportunities-dialog" aria-labelledby="opportunities-form-title">
+      <div class="form-dialog-head">
+        <div>
+          <p class="section-number">PUBLICAR</p>
+          <h2 id="opportunities-form-title">Nova oportunidade</h2>
+        </div>
+        <button class="dialog-close" type="button" data-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <form class="activity-form" id="opportunity-form" novalidate>
+        <div class="field field-wide">
+          <label for="opportunity-title">Título</label>
+          <input id="opportunity-title" name="title" type="text" placeholder="Ex.: Estágio de férias em dados" minlength="3" maxlength="120" autocomplete="off" required />
+        </div>
+        <div class="field">
+          <label for="opportunity-kind">Tipo</label>
+          <select id="opportunity-kind" name="kind" required>
+            <option value="" selected disabled>Selecionar</option>
+            <option value="estagio">Estágio</option>
+            <option value="pesquisa">Pesquisa / IC</option>
+            <option value="bolsa">Bolsa</option>
+            <option value="competicao">Competição</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="opportunity-deadline">Inscrições até</label>
+          <input id="opportunity-deadline" name="deadline" type="date" required />
+        </div>
+        <div class="field field-wide">
+          <label for="opportunity-org">Empresa ou responsável (opcional)</label>
+          <input id="opportunity-org" name="org" type="text" maxlength="80" autocomplete="off" />
+        </div>
+        <div class="field field-wide">
+          <label for="opportunity-description">Descrição</label>
+          <textarea id="opportunity-description" name="description" rows="3" maxlength="500" required></textarea>
+        </div>
+        <div class="field field-wide">
+          <label for="opportunity-link">Link de inscrição (opcional)</label>
+          <input id="opportunity-link" name="link" type="url" inputmode="url" placeholder="https://…" pattern="https?://.+" maxlength="500" autocomplete="off" spellcheck="false" />
+        </div>
+        <button class="submit-button" type="submit">
+          <span>Publicar oportunidade</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </button>
+      </form>
+    </dialog>
+
+    <dialog class="form-dialog" id="files-dialog" aria-labelledby="files-form-title">
+      <div class="form-dialog-head">
+        <div>
+          <p class="section-number">COMPARTILHAR</p>
+          <h2 id="files-form-title">Novo arquivo</h2>
+        </div>
+        <button class="dialog-close" type="button" data-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <p class="form-dialog-note">Cole o link de compartilhamento do OneDrive, Teams ou Drive (com acesso para a turma).</p>
+      <form class="activity-form" id="file-form" novalidate>
+        <div class="field field-wide">
+          <label for="file-title">Nome</label>
+          <input id="file-title" name="title" type="text" placeholder="Ex.: Slides da aula 5" minlength="3" maxlength="120" autocomplete="off" required />
+        </div>
+        <div class="field">
+          <label for="file-category">Tipo</label>
+          <select id="file-category" name="category" required>
+            <option value="" selected disabled>Selecionar</option>
+            <option value="slides">Slides</option>
+            <option value="lista">Lista de exercícios</option>
+            <option value="gabarito">Gabarito</option>
+            <option value="material">Material de apoio</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="file-subject">Matéria</label>
+          <select id="file-subject" name="subject">
+            <option value="">Geral</option>
+          </select>
+        </div>
+        <div class="field field-wide">
+          <label for="file-link">Link</label>
+          <input id="file-link" name="link" type="url" inputmode="url" placeholder="https://…" pattern="https?://.+" maxlength="500" autocomplete="off" spellcheck="false" required />
+        </div>
+        <button class="submit-button" type="submit">
+          <span>Adicionar arquivo</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </button>
+      </form>
+    </dialog>
+
+    <dialog class="form-dialog" id="materias-dialog" aria-labelledby="materias-title">
+      <div class="form-dialog-head">
+        <div>
+          <p class="section-number">TURMA</p>
+          <h2 id="materias-title">Matérias</h2>
+        </div>
+        <button class="dialog-close" type="button" data-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <p class="form-dialog-note">
+        Aparecem no formulário, nos filtros e nos arquivos. Remover uma matéria não apaga as atividades dela.
+      </p>
+      <form class="activity-form" id="materias-form" novalidate>
+        <ul class="materia-list" id="materia-list" aria-label="Matérias da turma"></ul>
+        <div class="field field-wide">
+          <label for="materia-new">Nova matéria</label>
+          <div class="inline-field">
+            <input id="materia-new" name="materia" type="text" placeholder="Ex.: Cálculo III" maxlength="30" autocomplete="off" />
+            <button class="ghost-button" id="materia-add" type="button">Adicionar</button>
+          </div>
+        </div>
+        <button class="submit-button" type="submit">
+          <span>Salvar matérias</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </button>
+      </form>
+    </dialog>
+
+    <dialog class="form-dialog" id="turma-dialog" aria-labelledby="turma-form-title">
+      <div class="form-dialog-head">
+        <div>
+          <p class="section-number">ADMIN</p>
+          <h2 id="turma-form-title">Nova turma</h2>
+        </div>
+        <button class="dialog-close" type="button" data-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <form class="activity-form" id="turma-form" novalidate>
+        <div class="field">
+          <label for="turma-nome">Nome</label>
+          <input id="turma-nome" name="nome" type="text" placeholder="Ex.: Turma B" minlength="2" maxlength="60" autocomplete="off" required />
+        </div>
+        <div class="field">
+          <label for="turma-semestre">Semestre</label>
+          <input id="turma-semestre" name="semestre" type="text" placeholder="2027.1" pattern="\d{4}\.[12]" inputmode="decimal" autocomplete="off" required />
+        </div>
+        <div class="field field-wide">
+          <label for="turma-materias">Matérias (uma por linha)</label>
+          <textarea id="turma-materias" name="materias" rows="5" required></textarea>
+        </div>
+        <div class="field field-wide" id="turma-copy-field">
+          <label for="turma-copy">Copiar membros de</label>
+          <select id="turma-copy" name="copy">
+            <option value="">Não copiar (começar vazia)</option>
+          </select>
+        </div>
+        <button class="submit-button" type="submit">
+          <span>Criar turma</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </button>
+      </form>
+    </dialog>
+
+    <dialog class="form-dialog" id="membros-dialog" aria-labelledby="membros-title">
+      <div class="form-dialog-head">
+        <div>
+          <p class="section-number" id="membros-turma">TURMA</p>
+          <h2 id="membros-title">Membros</h2>
+        </div>
+        <button class="dialog-close" type="button" data-close aria-label="Fechar">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18" /></svg>
+        </button>
+      </div>
+      <p class="form-dialog-note">Um e-mail do Insper por linha. Quem sair da lista perde o acesso a esta turma.</p>
+      <form class="activity-form" id="membros-form" novalidate>
+        <div class="field field-wide">
+          <label for="membros-lideres">Líderes</label>
+          <textarea id="membros-lideres" name="lideres" rows="3" spellcheck="false"></textarea>
+        </div>
+        <div class="field field-wide">
+          <label for="membros-alunos">Alunos</label>
+          <textarea id="membros-alunos" name="alunos" rows="8" spellcheck="false"></textarea>
+        </div>
+        <button class="submit-button" type="submit">
+          <span>Salvar membros</span>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+        </button>
+      </form>
+    </dialog>
+
+    <!-- Adicionar um item ao calendário da pessoa. -->
+    <dialog class="confirm-dialog" id="add-calendar-dialog" aria-labelledby="add-calendar-title">
+      <form method="dialog">
+        <div class="dialog-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24"><path d="M4 6h16v14H4zM4 10h16M8 3v5M16 3v5M12 13v5M9.5 15.5h5" /></svg>
+        </div>
+        <p class="section-number">CALENDÁRIO</p>
+        <h2 id="add-calendar-title">Adicionar ao calendário</h2>
+        <p id="add-calendar-description"></p>
+        <div class="calendar-choices">
+          <a class="calendar-choice" id="add-google" target="_blank" rel="noopener noreferrer">Google Agenda</a>
+          <a class="calendar-choice" id="add-outlook" target="_blank" rel="noopener noreferrer">Outlook (Insper)</a>
+          <button class="calendar-choice" id="add-ics" type="button">Baixar .ics (iPhone e outros)</button>
+        </div>
+        <div class="dialog-actions dialog-actions-single">
+          <button class="button-secondary" value="cancel">Fechar</button>
+        </div>
+      </form>
+    </dialog>
+
     <dialog class="confirm-dialog" id="delete-dialog" aria-labelledby="dialog-title">
       <form method="dialog">
         <div class="dialog-icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24">
-            <path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" />
-          </svg>
+          <svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M7 7l1 13h8l1-13M10 11v5M14 11v5" /></svg>
         </div>
         <p class="section-number">LIXEIRA</p>
         <h2 id="dialog-title">Apagar esta atividade?</h2>
-        <p id="dialog-description">
-          Ela sai da agenda de todos e fica na lixeira por 7 dias.
-        </p>
+        <p id="dialog-description">Ela sai da agenda de todos e fica na lixeira por 7 dias.</p>
         <div class="dialog-actions">
           <button class="button-secondary" value="cancel">Cancelar</button>
-          <button class="button-danger" id="confirm-delete" value="confirm">
-            Mover para a lixeira
-          </button>
+          <button class="button-danger" id="confirm-delete" value="confirm">Mover para a lixeira</button>
         </div>
       </form>
     </dialog>
